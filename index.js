@@ -7,9 +7,9 @@ client.on('ready', () => {
 
 client.on('messageCreate', message => {
 
-    if (message.content === '!hello') {
+    if (message.content === 'KIR') {
 
-        message.channel.send('Hello World!');
+        message.channel.send('Hell yeah I keep it real');
         console.log('Processed ' + message.content)
 
     }
