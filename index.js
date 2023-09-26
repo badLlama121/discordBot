@@ -25,6 +25,15 @@ client.on('messageCreate', initialQuery => {
 
         console.log('Quoting user ' + initialQuery.author.username);
 
+        if(initialQuery.author.globalName == 'kerouac5')
+        {
+            if(Math.random() * 100 > 85)
+            {
+                initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
+                return;
+            }
+        }
+
         var response = initialQuery.content.replace("!s ", "").split('/');
         var cleanStr = response[0];
         
