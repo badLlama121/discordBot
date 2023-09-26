@@ -26,14 +26,18 @@ client.on('messageCreate', message => {
      
       const matching = messages.filter(query);
       let values = Array.from(matching.values());
-      
-      console.log(values)});
+      console.log(values);
+      for(let i=0;i < values.length;i++)
+        if(values[i].toString().indexOf('!s') < 0){
+          //console.log(values[i].content.replace(cleanStr, response[1]))
+          const author = values[i].author.username;
+          message.channel.send('@'+author +' '+ values[i].content.replace(cleanStr, ' '+response[1]));
+        }
+        
+      })
         
       }
-      //var replacephrase = message.content.replace(response[0], response[1]);
-      //var finalOutput = 
-      
-      //message.channel.send(`<@${user.id}>` + replacephrase.split("/")[0]);
+     
     }
    
   )
