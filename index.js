@@ -1,6 +1,16 @@
 const { Client, GatewayIntentBits } = require('discord.js')
 require('dotenv').config();
 
+function replaceAllIgnoreCase(inputString, searchValue, replacement) {
+    // Create a regular expression with the 'i' flag for case-insensitive matching
+    const regex = new RegExp(searchValue, 'gi');
+  
+    // Use the replace method with the regular expression
+    const resultString = inputString.replace(regex, replacement);
+  
+    return resultString;
+  }
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] })
 
 client.on('ready', () => {
@@ -14,15 +24,6 @@ client.on('messageCreate', initialQuery => {
         // Substitution query identified
 
         console.log('Quoting user ' + initialQuery.author.username);
-
-        if(initialQuery.author.globalName == 'kerouac5')
-        {
-            if(Math.random() * 100 > 85)
-            {
-                initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
-                return;
-            }
-        }
 
         var response = initialQuery.content.replace("!s ", "").split('/');
         var cleanStr = response[0];
@@ -44,10 +45,11 @@ client.on('messageCreate', initialQuery => {
             for(let i=0; i < values.length; i++)
                 if((values[i].toString().indexOf('!s') != 0) && (values[i].author.bot === false)) {
                     console.log('Identified a non !s match');
-                    //console.log(values[i].content.replace(cleanStr, response[1]))
+                    console.log(replaceAllIgnoreCase(values[i].content,cleanStr,response[1]));
                     const author = values[i].author.toString();
                     //console.log(author);
-                    replacePhrase = values[i].content.replace(cleanStr, '**' + response[1] + '**');
+                    replacePhrase = replaceAllIgnoreCase(values[i].content,cleanStr, '**' + response[1] + '**');
+                    //replacePhrase = values[i].content.replace(cleanStr, '**' + response[1] + '**');
                     initialQuery.channel.send(author + ' ' + replacePhrase);
                     break;
                 } 
