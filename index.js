@@ -32,11 +32,10 @@ client.on('messageCreate', message => {
           //console.log(values[i].content.replace(cleanStr, response[1]))
           const author = values[i].author.toString();
           //console.log(author);
-          message.channel.send(author+ ' '+values[i].content.replace(cleanStr, ' '+response[1]));
+          const replacePhrase = values[i].content.replace(cleanStr, ' **'+response[1]+'**');
+          message.channel.send(author+ '' +replacePhrase);
           break;
-        } else {
-          message.channel.send('uhh, stop that!');
-        }
+        } 
       })
         
       }
