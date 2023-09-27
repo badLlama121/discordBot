@@ -34,46 +34,48 @@ client.on('messageCreate', initialQuery => {
             }
         }
 
-        var response = initialQuery.content.replace("!s ", "").split('/');
-        var cleanStr = response[0];
+        var response = initialQuery.content.replace('!s ', '').split('/');
+        const regex = new RegExp(response[0], 'gi');
         
-        console.log('cleanStr of ' + cleanStr);
         let channel = initialQuery.channel;
+        let replacePhrase = '';
 
-        channel.messages.fetch({ limit: 25 }).then(messageHistory => {
-            //const query = (msg) => msg.content.indexOf(cleanStr) > 0;
-            const query = (msg) => msg.content.indexOf(cleanStr) > -1;
-             
-            const matching = messageHistory.filter(query);
-            let values = Array.from(matching.values());
-            //console.log(values);
+        var failedToFind;
 
-            let replacePhrase = '';
+        channel.messages.fetch({ limit: 25}).then(messages => {
+            failedToFind = messages.every(msg => {
+                if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
+                    console.log('Ignoring message from bot or !s');
 
-            console.log('Searching through ' + values.length + ' matching messages');
-            for(let i=0; i < values.length; i++)
-                if((values[i].toString().indexOf('!s') != 0) && (values[i].author.bot === false)) {
-                    console.log('Identified a non !s match');
-                    console.log(replaceAllIgnoreCase(values[i].content,cleanStr,response[1]));
-                    const author = values[i].author.toString();
-                    //console.log(author);
-                    replacePhrase = replaceAllIgnoreCase(values[i].content,cleanStr, '**' + response[1] + '**');
-                    //replacePhrase = values[i].content.replace(cleanStr, '**' + response[1] + '**');
-                    initialQuery.channel.send(author + ' ' + replacePhrase);
-                    break;
-                } 
+                    return true;
+                }
+                else if(msg.content.search(regex) > -1) {
+                    console.log('Match found for message ' + msg.content);
+
+                    if(response[1].length > 0) {
+                        replacePhrase = msg.content.replace(regex, '**' + response[1] + '**');
+                    }
+                    else {
+                        replacePhrase = msg.content.replace(regex, '');
+                    }
+                    initialQuery.channel.send(msg.author.toString() + ' ' + replacePhrase);
+
+                    return false;
+                }
                 else
                 {
-                    console.log('Identified a match but it starts with !s');
-                }
+                    console.log('Message did not match');
 
-                if(replacePhrase == '')
-                    initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumdum');
+                    return true;
+                }
             })
 
-        }
+            if(failedToFind) {
+                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumdum');
+            }
+        })
     }
-)
+})
 
 client.once('ready', () => {
     console.log('Ready!');
