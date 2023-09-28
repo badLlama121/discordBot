@@ -27,7 +27,7 @@ client.on('messageCreate', initialQuery => {
 
         if(initialQuery.author.globalName == 'kerouac5')
         {
-            if(Math.random() * 100 > 85)
+            if(Math.random() * 100 > 95)
             {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return;
