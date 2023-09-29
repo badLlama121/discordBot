@@ -1,16 +1,12 @@
-# KIRBot - Keepin it real since 2023
+## KIRBot - Keepin it real since 2023
 
-## Local Development Setup
-
+### Local Development Setup
 - Node.js https://nodejs.org/en/download
-- `npm install -g discord.js dotenv`
+- npm install -g discord.js dotenv nodemon
 - Clone this repo
-- `npm ci`
 - Create .env file and get token from steel
-```sh
-TOKEN='[INSERT TOKEN HERE]'
-``````
-- run `npm start` command from development directory, and should start local instance and dev bot should respond to commands
+    - TOKEN='[INSERT TOKEN HERE]'
+- run nodemon command from development directory, and should start local instance and dev bot should respond to commands
 
 ### Push to prod
 - Give me github deets so I can add you as a contributor
