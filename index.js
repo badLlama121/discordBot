@@ -9,13 +9,44 @@ function replaceAllIgnoreCase(inputString, searchValue, replacement) {
     const resultString = inputString.replace(regex, replacement);
   
     return resultString;
-  }
+}
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] })
+/**
+ * Function that takes a string and then returns a "dumbed down" version 
+ * of it. Without smart quotes, etc.
+ * @todo we need to strip accents, umlats, etc.
+ * @param {string} strInput the input. 
+ * @returns a cleaned version of the string.
+ */
+function cleanseString(strInput) {
+    return strInput
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/\u2026/g, "...")
+        .replace(/\u2013/g, "-")
+        .replace(/\u2014/g, "--");
+}
+
+/// because javascript gonna be javascript about this we can't use a lambda ere
+String.prototype.unicodeToMerica = function () { cleanseString(this); }
+
+const config = {
+    TheRealests: process.env.THE_REALEST_MFERS?.split(';') ??  [ 'kerouac5' ],
+    
+    OneBlockedPercent: process.env.ONE_BLOCKED_PERCENT ?? 5
+};
+
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent
+    ] 
+});
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
-})
+});
 
 client.on('messageCreate', initialQuery => {
     if (initialQuery.author.bot) return;
@@ -25,9 +56,9 @@ client.on('messageCreate', initialQuery => {
 
         console.log('Quoting user ' + initialQuery.author.username);
 
-        if(initialQuery.author.globalName == 'kerouac5')
+        if(config.TheRealests.filter((k) => k.toLocalLowerCase() === k ))
         {
-            if(Math.random() * 100 > 95)
+            if(Math.random() * 100 > (100 - config.OneBlockedPercent))
             {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return;
@@ -35,7 +66,7 @@ client.on('messageCreate', initialQuery => {
         }
 
         var response = initialQuery.content.replace('!s ', '').split('/');
-        const regex = new RegExp(response[0], 'gi');
+        const regex = new RegExp(response[0].unicodeToMerica(), 'gi');
         
         let channel = initialQuery.channel;
         let replacePhrase = '';
@@ -49,11 +80,11 @@ client.on('messageCreate', initialQuery => {
 
                     return true;
                 }
-                else if(msg.content.search(regex) > -1) {
+                else if(msg.content.unicodeToMerica().search(regex) > -1) {
                     console.log('Match found for message ' + msg.content);
 
                     if(response[1].length > 0) {
-                        replacePhrase = msg.content.replace(regex, '**' + response[1] + '**');
+                        replacePhrase = msg.content.unicodeToMerica().replace(regex, '**' + response[1] + '**');
                     }
                     else {
                         replacePhrase = msg.content.replace(regex, '');
@@ -71,7 +102,7 @@ client.on('messageCreate', initialQuery => {
             })
 
             if(failedToFind) {
-                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumdum');
+                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
             }
         })
     }
@@ -79,6 +110,6 @@ client.on('messageCreate', initialQuery => {
 
 client.once('ready', () => {
     console.log('Ready!');
-})
+});
 //console.log('my token= '+process.env.TOKEN)
 client.login(process.env.TOKEN)
