@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits } = require('discord.js')
-require('dotenv').config();
+const config = require('./config');
 
 function replaceAllIgnoreCase(inputString, searchValue, replacement) {
     // Create a regular expression with the 'i' flag for case-insensitive matching
@@ -32,12 +32,21 @@ String.prototype.unicodeToMerica = function () {
     return cleanseString(this); 
 }
 
-/// We want ENTERPRISE LEVEL runtime configuration
-const config = {
-    TheRealests: process.env.THE_REALEST_MFERS?.split(';') ??  [ 'kerouac5' ],
-    
-    OneBlockedPercent: process.env.ONE_BLOCKED_PERCENT ?? 5
-};
+
+
+/**
+ * Gets the config but cleans out any values that should be secret.
+ */
+getCleansedConfig = () => ({ ... config, Token: undefined });
+
+/**
+ * Determines if the user is one of the realest mother fuckers there is.
+ * @param {string } username the query
+ * @returns true if user is one of the realest;
+ */
+function isRealest(username) {
+    return config.TheRealests.filter((k) => k.toLocaleLowerCase() === username);
+}
 
 const client = new Client({ 
     intents: [
@@ -54,18 +63,23 @@ client.on('ready', () => {
 client.on('messageCreate', initialQuery => {
     if (initialQuery.author.bot) return;
   
-    if (initialQuery.content.indexOf('!s ') == 0) {
+    if ( config.AllowConfigDump === true &&  initialQuery.content.indexOf('!configDump') === 0) {
+        initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}}\n\`\`\``);
+    }
+    else if (initialQuery.content.indexOf('!s ') == 0) {
         // Substitution query identified
 
         console.log('Quoting user ' + initialQuery.author.username);
 
-        if(config.TheRealests.filter((k) => k.toLocaleLowerCase() === k ))
+        const isARealOne = isRealest(initialQuery.author.username);
+        if (isARealOne)
         {
-            if(Math.random() * 100 > (100 - config.OneBlockedPercent))
-            {
+            console.trace('One of the realest', initialQuery.author);
+        }
+        if(Math.random() * 100 > (100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent)))
+        {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return;
-            }
         }
 
         var response = initialQuery.content.replace('!s ', '').split('/');
@@ -111,8 +125,12 @@ client.on('messageCreate', initialQuery => {
     }
 })
 
-client.once('ready', () => {
-    console.log('Ready!');
-});
-//console.log('my token= '+process.env.TOKEN)
-client.login(process.env.TOKEN)
+
+if (config.Token) {
+    client.once('ready', () => {
+        console.log('Ready!');
+    });
+    client.login(config.Token);
+} else {
+    console.error('Set a token dumb ass!!');
+}
