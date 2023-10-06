@@ -74,7 +74,7 @@ client.on('messageCreate', initialQuery => {
         const isARealOne = isRealest(initialQuery.author.username);
         if (isARealOne)
         {
-            console.trace('One of the realest', initialQuery.author);
+            console.debug('One of the realest', initialQuery.author);
         }
         if(Math.random() * 100 > (100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent)))
         {
@@ -90,7 +90,7 @@ client.on('messageCreate', initialQuery => {
 
         var failedToFind;
 
-        channel.messages.fetch({ limit: 25}).then(messages => {
+        channel.messages.fetch({ limit: config.MessageFetchCount}).then(messages => {
             failedToFind = messages.every(msg => {
                 if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
                     console.debug('Ignoring message from bot or search message');
