@@ -8,6 +8,7 @@
 - `npm ci`
 - Create .env file and get token from steel
 ```sh
+ALLOW_CONFIG_DUMP=true
 TOKEN='[INSERT TOKEN HERE]'
 ``````
 - run `npm start` command from development directory, and should start local instance and dev bot should respond to commands
