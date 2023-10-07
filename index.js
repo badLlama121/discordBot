@@ -1,15 +1,6 @@
 const { Client, GatewayIntentBits } = require('discord.js')
 const config = require('./config');
 
-function replaceAllIgnoreCase(inputString, searchValue, replacement) {
-    // Create a regular expression with the 'i' flag for case-insensitive matching
-    const regex = new RegExp(searchValue, 'gi');
-  
-    // Use the replace method with the regular expression
-    const resultString = inputString.replace(regex, replacement);
-  
-    return resultString;
-}
 
 /**
  * Function that takes a string and then returns a "dumbed down" version 
@@ -32,12 +23,10 @@ String.prototype.unicodeToMerica = function () {
     return cleanseString(this); 
 }
 
-
-
 /**
  * Gets the config but cleans out any values that should be secret.
  */
-getCleansedConfig = () => ({ ... config, Token: undefined });
+const getCleansedConfig = () => ({ ... config, Token: undefined });
 
 /**
  * Determines if the user is one of the realest mother fuckers there is.
@@ -52,7 +41,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
     ] 
 });
 
