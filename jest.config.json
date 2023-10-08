@@ -1,0 +1,16 @@
+{
+    "collectCoverageFrom": [
+        "**/*.{js,jsx}",
+        "!**/node_modules/**",
+        "!**/vendor/**",
+        "!./coverage/**"
+      ],
+      "coverageThreshold": {
+        "global": {
+            "branches": 17,
+            "functions": 0,
+            "lines": 9,
+            "statements": 9
+        }
+    }
+}

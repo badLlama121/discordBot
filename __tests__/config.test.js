@@ -1,5 +1,3 @@
-const exp = require('constants');
-
 describe('Tests the config module', () => {
     
     let OLD_ENV;
