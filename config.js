@@ -1,14 +1,14 @@
 require('dotenv').config();
 
-const messesageFetchCount = process.env.MESSAGE_FETCH_COUNT;
-const oneBlockedPercent = process.env.ONE_BLOCKED_PERCENT;
-const realestOneBlockedPercentneBlockedPercent = process.env.RealestOneBlockedPercent;
+const messesageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT);
+const oneBlockedPercent = Number.parseInt(process.env.ONE_BLOCKED_PERCENT);
+const realestOneBlockedPercentneBlockedPercent = Number.parseInt(process.env.REALEST_ONE_BLOCKED_PERCENT);
 
 module.exports = {
     /**
      * Set to true to allow !configDump
      */
-    AllowConfigDump: process.env.ALLOW_CONFIG_DUMP?.localeCompare('True', 'en', { sensitivity: 'base' }) === 0,
+    AllowConfigDump: process.env.ALLOW_CONFIG_DUMP?.localeCompare('true', 'en', { sensitivity: 'base' }) === 0,
 
     /**
      * Array of people that get the Keroac5 treatment.
@@ -18,13 +18,13 @@ module.exports = {
     /**
      * Number of messages to fetch when retrieving history.
      */
-    MessageFetchCount: (messesageFetchCount > 0) ? messesageFetchCount : 50,
+    MessageFetchCount: (messesageFetchCount >= 0) ? messesageFetchCount : 50,
     
     /**
      * Percentage change of getting "who is one blocked message" for plebians who should be so lucky to be in
      * the present of so much KIR.
      */
-    OneBlockedPercent: (oneBlockedPercent > 0) ? oneBlockedPercent : 1,
+    OneBlockedPercent: (oneBlockedPercent >= 0) ? oneBlockedPercent : 1,
     
     /**
      * Percentage change of getting "who is one blocked message" for the realest.

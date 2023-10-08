@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js')
+const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 
 
@@ -21,7 +21,7 @@ function cleanseString(strInput) {
 /// because javascript gonna be javascript about this we can't use a lambda ere
 String.prototype.unicodeToMerica = function () { 
     return cleanseString(this); 
-}
+};
 
 /**
  * Gets the config but cleans out any values that should be secret.
@@ -105,14 +105,14 @@ client.on('messageCreate', initialQuery => {
 
                     return true;
                 }
-            })
+            });
 
             if(failedToFind) {
                 initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
             }
-        })
+        });
     }
-})
+});
 
 
 if (config.Token) {
