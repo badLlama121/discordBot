@@ -29,7 +29,7 @@ module.exports = {
     /**
      * Percentage change of getting "who is one blocked message" for the realest.
      */
-    RealestOneBlockedPercent: (realestOneBlockedPercentneBlockedPercent > 0) ? realestOneBlockedPercentneBlockedPercent : 5,
+    RealestOneBlockedPercent: (realestOneBlockedPercentneBlockedPercent >= 0) ? realestOneBlockedPercentneBlockedPercent : 5,
 
     /**
      * The discord token.
