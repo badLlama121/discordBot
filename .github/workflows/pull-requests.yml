@@ -25,4 +25,10 @@ jobs:
       - name: Test things
         run: |
             npm ci    # This will make sure that package.json and package-lock.json are in sync
+            npm run lint
+            npx jest --coverage --coverageReporters=cobertura
             npm test  # This will be unit tests
+      - uses: 5monkeys/cobertura-action@master
+        with:r
+          path: coverage\cobertura-coverage.xml
+          minimum_coverage: 75

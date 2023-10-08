@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon",
-    "test": "echo \"Error: no test specified\" && exit 0"
+    "lint": "eslint .",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,11 @@
   "dependencies": {
     "discord.js": "^14.13.0",
     "dotenv": "^16.3.1",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.51.0",
+    "eslint-plugin-jest": "^27.4.2"
   }
 }
