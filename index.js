@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js')
+const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const { makeMemeAsync } = require('./memes');
 
@@ -57,13 +57,13 @@ client.on('messageCreate', initialQuery => {
         initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}}\n\`\`\``);
     }
     else if (initialQuery.content.indexOf('!geordieDrake ') == 0) {
-        const [ , before, after ] = initialQuery.content.split(' ');
+        const [ before, after ] = initialQuery.content.substring(13).trimStart().split('/');
         makeMemeAsync('geordieDrake', before, after).then(buffer => {
             initialQuery.channel.send({
                 content: 'Your meme sir', 
                 files: [ 
                     {
-                        attachment: buffer, name: 'geordieDrake.svg'
+                        attachment: buffer, name: 'geordieDrake.png'
                     }
                 ]
             });

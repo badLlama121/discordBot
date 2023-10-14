@@ -16,9 +16,7 @@ async function makeMemeAsync (meme, beforeText, afterText) {
             resolve(buffer);
             }
         });
-    })    
-    
-        
+    }); 
 }
 
 module.exports = {
