@@ -14,7 +14,19 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+   xmlns:svg="http://www.w3.org/2000/svg">
+   <style>
+    .memeText {
+      font-size:48px;
+      white-space:pre;
+      fill: #000000;
+      background-color: #FF0000;
+      font-family:Consolas;-inkscape-font-specification:Consolas;
+      text-align:center;
+      text-anchor:middle;
+    }
+   </style>
+   <sodipodi:namedview
      id="namedview1"
      pagecolor="#ffffff"
      bordercolor="#000000"
@@ -34,11 +46,11 @@
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" /><defs
      id="defs1"><rect
-       x="496.24039"
-       y="539.58669"
-       width="402.07429"
-       height="215.2368"
-       id="rect3" /><rect
+       x="430"
+       y="430"
+       width="430"
+       height="430"
+       id="afterTextRect" /><rect
        x="524.63969"
        y="44.840999"
        width="384.13789"
@@ -66,13 +78,9 @@
            style="font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle"
            id="tspan1">{beforeText}</tspan></tspan></text>
            <text
-       xml:space="preserve"
        transform="scale(0.26458333)"
        id="afterText"
-       class="memeText beforeText"
-       style="font-size:48px;white-space:pre;shape-inside:url(#rect3);fill:#000000"><tspan
+       class="memeText afterText"><tspan
          x="720"
          y="720"
-         id="afterTextSpan"><tspan
-           style="font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle"
-           id="tspan5">{afterText}</tspan></tspan></text></g></svg>
+         id="afterTextSpan">{afterText}</tspan></text></g></svg>

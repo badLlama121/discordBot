@@ -1,0 +1,13 @@
+<svg 
+    width="960px" 
+    height="960px" 
+    xmlns="http://www.w3.org/2000/svg">
+  <style>
+    #redBox { fill: red; }
+    #blueBox { fill: blue; }
+    #greenBox { fill: green; }
+  </style>
+  <rect id="redBox" x="0" y="0" width="480" height="960"/>
+  <rect id="blueBox" y="0" x="480" width="480" height="480"/>
+  <rect id="greenBox" y="480" x="480" width="480" height="480"/>
+</svg>
