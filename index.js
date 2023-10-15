@@ -1,27 +1,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
+const { replaceFirstMessage } = require('./replacer');
 
-
-/**
- * Function that takes a string and then returns a "dumbed down" version 
- * of it. Without smart quotes, etc.
- * @todo we need to strip accents, umlats, etc.
- * @param {string} strInput the input. 
- * @returns a cleaned version of the string.
- */
-function cleanseString(strInput) {
-    return strInput
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/\u2026/g, "...")
-        .replace(/\u2013/g, "-")
-        .replace(/\u2014/g, "--");
-}
-
-/// because javascript gonna be javascript about this we can't use a lambda ere
-String.prototype.unicodeToMerica = function () { 
-    return cleanseString(this); 
-};
 
 /**
  * Gets the config but cleans out any values that should be secret.
@@ -49,7 +29,7 @@ client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on('messageCreate', initialQuery => {
+client.on('messageCreate', async (initialQuery) => {
     if (initialQuery.author.bot) return;
   
     if ( config.AllowConfigDump === true &&  initialQuery.content.indexOf('!configDump') === 0) {
@@ -71,46 +51,17 @@ client.on('messageCreate', initialQuery => {
                 return;
         }
 
-        var response = initialQuery.content.replace('!s ', '').split('/');
+        var response = initialQuery.content.replace(/!s */, '').split('/');
         const regex = new RegExp(response[0].unicodeToMerica(), 'gi');
         
         let channel = initialQuery.channel;
-        let replacePhrase = '';
 
-        var failedToFind;
-
-        channel.messages.fetch({ limit: config.MessageFetchCount}).then(messages => {
-            failedToFind = messages.every(msg => {
-                if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
-                    console.debug('Ignoring message from bot or search message');
-
-                    return true;
-                }
-                else if(msg.content.unicodeToMerica().search(regex) > -1) {
-                    console.log('Match found for message ' + msg.content);
-
-                    if(response[1].length > 0) {
-                        replacePhrase = msg.content.unicodeToMerica().replace(regex, '**' + response[1] + '**');
-                    }
-                    else {
-                        replacePhrase = msg.content.replace(regex, '');
-                    }
-                    initialQuery.channel.send(msg.author.toString() + ' ' + replacePhrase);
-
-                    return false;
-                }
-                else
-                {
-                    console.log('Message did not match');
-
-                    return true;
-                }
-            });
-
-            if(failedToFind) {
-                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
-            }
-        });
+        
+        const messages = await channel.messages.fetch({ limit: config.MessageFetchCount});
+        const failedToFind = replaceFirstMessage(messages, regex, response[1], channel);
+        if(failedToFind) {
+            initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
+        }
     }
 });
 
