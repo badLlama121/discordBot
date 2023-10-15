@@ -5,12 +5,13 @@
         "!**/vendor/**",
         "!./coverage/**"
       ],
+      "clearMocks": true,
       "coverageThreshold": {
         "global": {
-            "branches": 17,
-            "functions": 0,
-            "lines": 9,
-            "statements": 9
+            "branches": 26,
+            "functions": 40,
+            "lines": 35,
+            "statements": 33
         }
     }
 }
