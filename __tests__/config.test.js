@@ -24,6 +24,7 @@ describe('Tests the config module', () => {
             "AllowConfigDump": false,
             "MessageFetchCount": 50,
             "OneBlockedPercent": 1,
+            "ScoreDatabase": './score.db3',
             "RealestOneBlockedPercent": 5,
             "TheRealests": [
               "kerouac5",

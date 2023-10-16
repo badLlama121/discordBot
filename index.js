@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const { replaceFirstMessage } = require('./replacer');
+const { processScores, getScore } = require('./scoring');
 
 
 /**
@@ -62,6 +63,17 @@ client.on('messageCreate', async (initialQuery) => {
         if(failedToFind) {
             initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
         }
+    }
+    else if (initialQuery.content.indexOf('!score ') == 0)
+    { 
+        const phrase = initialQuery.content.replace(/^!score/, '').trim();
+        getScore(phrase, score => {
+            initialQuery.channel.send(`Score *${phrase}*: ${score}`);
+        });
+    }
+    else
+    {
+        processScores(initialQuery);
     }
 });
 

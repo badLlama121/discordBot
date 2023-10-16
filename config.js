@@ -19,6 +19,11 @@ module.exports = {
      * Number of messages to fetch when retrieving history.
      */
     MessageFetchCount: (messesageFetchCount >= 0) ? messesageFetchCount : 50,
+
+    /**
+     * Path to the scoring database.
+     */
+    ScoreDatabase: process.env.SCORE_DATABASE ?? './score.db3',
     
     /**
      * Percentage change of getting "who is one blocked message" for plebians who should be so lucky to be in
