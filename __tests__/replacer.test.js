@@ -9,7 +9,7 @@ describe('Tests the replacer module', () => {
         'I guess I could get back to working on the bot but honestly I haven’t written code for a living since 2006, zippy would run circles around me'
     ].map(content => ({ 
         content,
-        author: "author"  
+        author: 'author'  
     }));
 
     const channel = {

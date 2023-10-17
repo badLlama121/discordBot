@@ -39,7 +39,7 @@ describe('Tests for the scoring module', () => {
             expect(score).toBe(0);
         });
         
-        await processScores({ content: "urch++\rpotato++\nurch++\r\nurch++" });
+        await processScores({ content: 'urch++\rpotato++\nurch++\r\nurch++' });
         await getScore('urch', score => {
             expect(score).toBe(3);
         });
