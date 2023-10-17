@@ -21,13 +21,13 @@ describe('Tests the config module', () => {
         const config = require('../config');
 
         expect(config).toEqual( {
-            "AllowConfigDump": false,
-            "MessageFetchCount": 50,
-            "OneBlockedPercent": 1,
-            "ScoreDatabase": './score.db3',
-            "RealestOneBlockedPercent": 5,
-            "TheRealests": [
-              "kerouac5",
+            'AllowConfigDump': false,
+            'MessageFetchCount': 50,
+            'OneBlockedPercent': 1,
+            'ScoreDatabase': './score.db3',
+            'RealestOneBlockedPercent': 5,
+            'TheRealests': [
+              'kerouac5',
             ]
         });
     });

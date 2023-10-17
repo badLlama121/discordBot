@@ -1,7 +1,9 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const config = require('./config');
 
-const db = new sqlite3.Database(config.ScoreDatabase);
+const db = new Database(config.ScoreDatabase);
+db.pragma('journal_mode = WAL');
+
 
 /**
  * Runs the schema creation commands;
@@ -9,8 +11,9 @@ const db = new sqlite3.Database(config.ScoreDatabase);
  * @param {Database} db the datbase. 
  */
 function createSchema(db) {
-    db.run("CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);");
-    db.run('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase  COLLATE NOCASE);');
+    
+    db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase  COLLATE NOCASE);').run();
 }
 
 /**
@@ -21,16 +24,15 @@ function createSchema(db) {
  * 
  * @returns {Number} the total score for the phrase. 
  */
-async function getScore(phrase, callback) {
-    return new Promise(resolve => db.serialize(() => {
-        createSchema(db);
-        const selectStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;');
-        selectStmt.each(phrase, (err, row)=> {
-            console.log(`Total score for ${phrase} is ${row.total}.`);            
-            callback(row.total);
-        });
-        selectStmt.finalize(() => resolve());
-    }));
+function getScore(phrase, callback) {
+    createSchema(db);
+    const selectStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;');
+    const row = selectStmt.get(phrase);
+    console.log(`Total score for ${phrase} is ${row.total}.`);            
+    if (callback != null) {
+        callback(row.total);
+    }
+    return row.total;
 }
 
 /**
@@ -39,41 +41,30 @@ async function getScore(phrase, callback) {
  * @param {{ content: string; author: any }} message
  * @return {Promise<void>} 
  */
-async function processScores(message) {
+function processScores(message) {
     const lines = message.content.split(/[\r\n]+/);
-    await Promise.all(
-        lines.map(line => new Promise(resolve => {
-            let score = 0;
-            if (line.endsWith('++'))
-            {
-                score = 1;
-            }
-            else if (line.endsWith('--'))
-            {
-                score = -1;
-            }
-            else 
-            {
-                resolve();
-                return;
-            }
-            const phrase = line.replace(/\W*[+-]$/, '');
-            console.log('inserting record for phrae ' + phrase);
-            db.serialize(() => {
-                createSchema(db);
+    lines.map(line =>  {
+        let score = 0;
+        if (line.endsWith('++'))
+        {
+            score = 1;
+        }
+        else if (line.endsWith('--'))
+        {
+            score = -1;
+        }
+        else 
+        {
+            return;
+        }
+        const phrase = line.replace(/\W*[+-]$/, '');
+        console.log('inserting record for phrae ' + phrase);
+        createSchema(db);
 
-                const insertStmt = db.prepare("INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)");
-                insertStmt.run(new Date(), message.content, message.author?.toString(), phrase, score);
-                insertStmt.finalize();
-                
-                const selectStmt = db.prepare('SELECT SUM(score) as total FROM scoring WHERE phrase = ?');
-                selectStmt.each(phrase, (err, row)=> {
-                    console.log(`Total score for ${phrase} is ${row.total}.`);
-                });
-                selectStmt.finalize(() => { resolve(); });
-            });
-        }))
-    );
+        const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
+        insertStmt.run(Date.now(), message.content, message.author?.toString(), phrase, score);
+    });
+    
 }
 
 module.exports = {
