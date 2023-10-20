@@ -41,7 +41,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
             console.log('Match found for message ' + msg.content);
 
             let replacePhrase = '';
-            if(replacement.length > 0) {
+            if(replacement?.length > 0) {
                 replacePhrase = cleansedMessageText.replace(regex, '**' + replacement + '**');
             }
             else {
@@ -61,6 +61,23 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
 
 }
 
+/**
+ * Takes the replace message and turn it into a searh regex and a replace message
+ * 
+ * @param {string} replaceCommand 
+ * @returns {{search:RegExp, replacement:string}}
+ */
+function splitReplaceCommand(replaceCommand) {
+    var response = replaceCommand.replace(/!s /, '').split('/');
+    const search = new RegExp(response[0].unicodeToMerica(), 'gi');
+
+    return {
+        search,
+        replacement: response[1]
+    }
+}
+
 module.exports = {
-    replaceFirstMessage
+    replaceFirstMessage,
+    splitReplaceCommand
 };

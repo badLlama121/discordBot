@@ -1,4 +1,4 @@
- const { replaceFirstMessage } = require('../replacer');
+ const { replaceFirstMessage, splitReplaceCommand } = require('../replacer');
 describe('Tests the replacer module', () => {
     const messages = [
         'No I used this for my demo so I could justify going hog wild',
@@ -15,6 +15,21 @@ describe('Tests the replacer module', () => {
     const channel = {
         send: jest.fn()
     };
+
+    it('allows the first character of a search to be whitespace', () => {
+        const sut = splitReplaceCommand('!s  a/b');
+
+        expect('a'.replace(sut.search, sut.replacement)).toBe('a');
+        expect(' a'.replace(sut.search, sut.replacement)).toBe('b');
+    });
+
+    it.each(['', null, undefined, false, 0])('tests the case for no replacement', (emptyIshStringIsh) => {
+        const regex = new RegExp('hog wild', 'gi');
+        const actual = replaceFirstMessage(messages, regex, emptyIshStringIsh, channel);
+
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith('author No I used this for my demo so I could justify going ');
+    });
     
     it('tests that the first match is what is returned', () => {
         const regex = new RegExp('hog wild', 'gi');
