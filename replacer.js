@@ -20,6 +20,21 @@ String.prototype.unicodeToMerica = function () {
 };
 
 /**
+ * Takes a string as input and outputs an object with two properties: `cleansed` and `urls`.
+ * The `cleansed` property contains the original string but with all URLs replaced with `|{|url|}|`.
+ * The `urls` property is an array of all removed URLs.
+ *
+ * @param {string} inputString - The input string to cleanse.
+ * @returns {{cleansed: string, urls: string[]}} - An object with two properties: `cleansed` and `urls`.
+ */
+function extractUrls(inputString) {
+    const urlRegex = /((https?:\/\/)?[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?)/gi;
+    const urls = inputString.match(urlRegex);
+    const cleansed = inputString.replace(urlRegex, '|{|url|}|');
+    return { cleansed, urls };
+  }
+
+/**
  * Does a replace on the first message that matches regex
  * 
  * @param {{content: string}[]} messages the messages to search through 
@@ -36,13 +51,14 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
 
             return true;
         }
-        const cleansedMessageText = msg.content.unicodeToMerica();
-        if(cleansedMessageText.search(regex) > -1) {
+        
+        const cleansedMessage = extractUrls(msg.content.unicodeToMerica());
+        if(cleansedMessage.cleansed.search(regex) > -1) {
             console.log('Match found for message ' + msg.content);
 
             let replacePhrase = '';
             if(replacement?.length > 0) {
-                replacePhrase = cleansedMessageText
+                replacePhrase = cleansedMessage.cleansed
                     .replace(regex, '\v' + replacement + '\v')
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
@@ -51,6 +67,9 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
             else {
                 replacePhrase = msg.content.replace(regex, '');
             }
+            cleansedMessage.urls?.forEach(url => {
+                replacePhrase = replacePhrase.replace('|{|url|}|', url);
+            });
             channel.send(msg.author.toString() + ' ' + replacePhrase);
 
             return false;
@@ -82,6 +101,7 @@ function splitReplaceCommand(replaceCommand) {
 }
 
 module.exports = {
+    extractUrls,
     replaceFirstMessage,
     splitReplaceCommand
 };

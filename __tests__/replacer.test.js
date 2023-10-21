@@ -1,4 +1,4 @@
- const { replaceFirstMessage, splitReplaceCommand } = require('../replacer');
+ const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../replacer');
 describe('Tests the replacer module', () => {
     const messages = [
         'No I used this for my demo so I could justify going hog wild',
@@ -6,7 +6,8 @@ describe('Tests the replacer module', () => {
         '!s      hog wild/to the prom with another dude',
         '!s a real project/your boss made you',
         'We never added it officially. I made a hacky one that I never checked in, and before I did zippy made a big refactor and I never integrated',
-        'I guess I could get back to working on the bot but honestly I haven’t written code for a living since 2006, zippy would run circles around me'
+        'I guess I could get back to working on the bot but honestly I haven’t written code for a living since 2006, zippy would run circles around me',
+        'oo https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz oo'
     ].map(content => ({ 
         content,
         author: 'author'  
@@ -59,4 +60,23 @@ describe('Tests the replacer module', () => {
         expect(actual).toBe(true);
         expect(channel.send).not.toBeCalled();
     });
+
+    it('cleanses string and returns URLs', () => {
+        const inputString = 'This is a sample string with a URL https://www.example.com and another URL http://www.example.org';
+        const expectedOutput = {
+            cleansed: 'This is a sample string with a URL |{|url|}| and another URL |{|url|}|',
+            urls: ['https://www.example.com', 'http://www.example.org']
+        };
+        expect(extractUrls(inputString)).toEqual(expectedOutput);
+    });
+      
+    it('does a replacement but ignored a url', () => {
+        const expected = 'author **aa** https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz **aa**';
+        const sut = splitReplaceCommand('!s oo/aa');
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith(expected);
+    });
+      
 });
