@@ -56,7 +56,7 @@ client.on('messageCreate', async (initialQuery) => {
         
         const messages = await channel.messages.fetch({ limit: config.MessageFetchCount});
         const splitMessage = splitReplaceCommand(initialQuery.content);
-        const failedToFind = replaceFirstMessage(messages, splitMessage.regex, splitMessage.replacement, channel);
+        const failedToFind = replaceFirstMessage(messages, splitMessage.search, splitMessage.replacement, channel);
         if(failedToFind) {
             initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
         }

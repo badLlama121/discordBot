@@ -54,7 +54,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
         
         const cleansedMessage = extractUrls(msg.content.unicodeToMerica());
         if(cleansedMessage.cleansed.search(regex) > -1) {
-            console.log('Match found for message ' + msg.content);
+            console.log(`Match found for message ${msg.content} with regex ${regex}`);
 
             let replacePhrase = '';
             if(replacement?.length > 0) {
