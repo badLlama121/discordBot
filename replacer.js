@@ -8,7 +8,7 @@
 function cleanseString(strInput) {
     return strInput
         .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u2018\u2019]/g, '\'')
         .replace(/\u2026/g, '...')
         .replace(/\u2013/g, '-')
         .replace(/\u2014/g, '--');
