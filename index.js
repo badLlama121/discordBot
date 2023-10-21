@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
-const { replaceFirstMessage } = require('./replacer');
+const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore } = require('./scoring');
 
 
@@ -50,16 +50,13 @@ client.on('messageCreate', async (initialQuery) => {
         {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return;
-        }
-
-        var response = initialQuery.content.replace(/!s */, '').split('/');
-        const regex = new RegExp(response[0].unicodeToMerica(), 'gi');
+        }       
         
         let channel = initialQuery.channel;
-
         
         const messages = await channel.messages.fetch({ limit: config.MessageFetchCount});
-        const failedToFind = replaceFirstMessage(messages, regex, response[1], channel);
+        const splitMessage = splitReplaceCommand(initialQuery.content);
+        const failedToFind = replaceFirstMessage(messages, splitMessage.regex, splitMessage.replacement, channel);
         if(failedToFind) {
             initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
         }

@@ -8,10 +8,10 @@
       "clearMocks": true,
       "coverageThreshold": {
         "global": {
-            "branches": 43,
-            "functions": 53,
-            "lines": 55,
-            "statements": 53
+            "branches": 45,
+            "functions": 61,
+            "lines": 60,
+            "statements": 59
         }
     }
 }
