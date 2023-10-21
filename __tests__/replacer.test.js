@@ -22,6 +22,19 @@ describe('Tests the replacer module', () => {
         expect('a'.replace(sut.search, sut.replacement)).toBe('a');
         expect(' a'.replace(sut.search, sut.replacement)).toBe('b');
     });
+    
+    it('tests that multiple concurrent replacementsi n asingle string get formatted correctly', () => {
+        const sut = splitReplaceCommand('!s z/t');
+        const messages = [{
+            content: 'nice peppy buzz',
+            author: 'author'
+        }];
+        const expected = 'author nice peppy bu**tt**';
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith(expected);
+    });
 
     it.each(['', null, undefined, false, 0])('tests the case for no replacement', (emptyIshStringIsh) => {
         const regex = new RegExp('hog wild', 'gi');

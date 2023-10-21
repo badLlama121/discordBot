@@ -42,7 +42,11 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
 
             let replacePhrase = '';
             if(replacement?.length > 0) {
-                replacePhrase = cleansedMessageText.replace(regex, '**' + replacement + '**');
+                replacePhrase = cleansedMessageText
+                    .replace(regex, '\v' + replacement + '\v')
+                    .replace('\v\v', '')
+                    .replace(/\v/g, '**');
+
             }
             else {
                 replacePhrase = msg.content.replace(regex, '');
@@ -74,7 +78,7 @@ function splitReplaceCommand(replaceCommand) {
     return {
         search,
         replacement: response[1]
-    }
+    };
 }
 
 module.exports = {
