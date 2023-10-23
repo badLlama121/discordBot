@@ -1,7 +1,8 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
-const { processScores, getScore } = require('./scoring');
+const { processScores, getScore, getHighsAndLows } = require('./scoring');
+const asTable = require('as-table');
 
 
 /**
@@ -21,9 +22,11 @@ function isRealest(username) {
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions, 
         GatewayIntentBits.MessageContent,
-    ] 
+    ],
+    partials: ['MESSAGE', 'CHANNEL', 'REACTION']
 });
 
 client.on('ready', () => {
@@ -62,16 +65,24 @@ client.on('messageCreate', async (initialQuery) => {
         }
     }
     else if (initialQuery.content.indexOf('!score ') == 0)
-    { 
+    {
         const phrase = initialQuery.content.replace(/^!score/, '').trim();
         getScore(phrase, score => {
             initialQuery.channel.send(`Score *${phrase}*: ${score}`);
         });
     }
+    else if (initialQuery.content.indexOf('!trending') == 0)
+    {        
+        initialQuery.channel.send(`Trending:\n\n\`\`\`\n${asTable(getHighsAndLows())}\`\`\`\n\n`);
+    }
     else
     {
         processScores(initialQuery);
     }
+});
+
+client.on('messageReactionAdd', async (reaction, user) => {
+    console.log(JSON.stringify(reaction, {space: '  '}), user);
 });
 
 
