@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const config = require('./config');
+const config = require('./config').getConfig();
 
 const db = new Database(config.ScoreDatabase);
 db.pragma('journal_mode = WAL');
@@ -28,7 +28,6 @@ function getScore(phrase, callback) {
     createSchema(db);
     const selectStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;');
     const row = selectStmt.get(phrase);
-    console.log(`Total score for ${phrase} is ${row.total}.`);            
     if (callback != null) {
         callback(row.total);
     }
@@ -58,7 +57,6 @@ function processScores(message) {
             return;
         }
         const phrase = line.replace(/\W*[+-]$/, '');
-        console.log('inserting record for phrae ' + phrase);
         createSchema(db);
 
         const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');

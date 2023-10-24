@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-const config = require('./config');
+const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore } = require('./scoring');
 
