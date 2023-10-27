@@ -12,10 +12,10 @@ const getCleansedConfig = () => ({ ... config, Token: undefined });
 /**
  * Determines if the user is one of the realest mother fuckers there is.
  * @param {string } username the query
- * @returns true if user is one of the realest;
+ * @returns {boolean} true if user is one of the realest;
  */
 function isRealest(username) {
-    return config.TheRealests.filter((k) => k.toLocaleLowerCase() === username);
+    return config.TheRealests.some((k) => k.toLocaleLowerCase() === username);
 }
 
 const client = new Client({ 
@@ -37,16 +37,17 @@ client.on('messageCreate', async (initialQuery) => {
         initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}}\n\`\`\``);
     }
     else if (initialQuery.content.indexOf('!s ') == 0) {
-        // Substitution query identified
-
         console.log('Quoting user ' + initialQuery.author.username);
 
         const isARealOne = isRealest(initialQuery.author.username);
         if (isARealOne)
         {
-            console.debug('One of the realest', initialQuery.author);
+            console.debug('One of the realest', initialQuery.author.username);
         }
-        if(Math.random() * 100 > (100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent)))
+        const randomVal = Math.random() * 100;
+        const triggerPecentage = 100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent);
+        console.debug(`Random Value: ${randomVal} - Trigger:  ${triggerPecentage}.`);
+        if(randomVal > triggerPecentage)
         {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return;
