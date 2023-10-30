@@ -27,6 +27,11 @@ const getConfig = () => {
         ScoreDatabase: process.env.SCORE_DATABASE ?? './score.db3',
         
         /**
+         * Set to true via the environment variable DISABLE_ONE_BLOCKED_MESSAGE to disable the random one blocked mssage behavior.
+         */
+        DisableOneBlockedMessage: process.env.DISABLE_ONE_BLOCKED_MESSAGE?.localeCompare('true', 'en', { sensitivity: 'base' }) === 0,
+        
+        /**
          * Percentage change of getting "who is one blocked message" for plebians who should be so lucky to be in
          * the present of so much KIR.
          */

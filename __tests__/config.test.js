@@ -22,6 +22,7 @@ describe('Tests the config module', () => {
 
         expect(config).toEqual( {
             'AllowConfigDump': false,
+            'DisableOneBlockedMessage': false,
             'MessageFetchCount': 50,
             'OneBlockedPercent': 1,
             'ScoreDatabase': './score.db3',

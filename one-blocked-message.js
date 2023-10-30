@@ -16,7 +16,8 @@ function isRealest(username) {
  * @returns true if one blocked message gets sent, false otherwise.
  */
 function oneBlockedMessage(initialQuery) {
-    const isARealOne = isRealest(initialQuery.author.username);
+    if (!config.DisableOneBlockedMessage) {
+        const isARealOne = isRealest(initialQuery.author.username);
         const randomVal = Math.random() * 100;
         const triggerPecentage = 100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent);
         console.debug(`Random Value: ${randomVal} - Trigger:  ${triggerPecentage}. User ${initialQuery.author.username} - Realest: ${isARealOne}.`);
@@ -25,8 +26,9 @@ function oneBlockedMessage(initialQuery) {
                 initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
                 return true;
         }
+    }
 
-        return false;
+    return false;
 }
 
 module.exports = {
