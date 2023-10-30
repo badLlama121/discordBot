@@ -24,12 +24,13 @@ describe('Tests for the scoring module', () => {
             'urch++',
             'poly--',
             'urch++',
-            'urch--'
+            'urch--',
+            'urch\nurch--'
         ].forEach(async (phrase) => {
             await processScores({ content: phrase });
         });
         await getScore('urch', score => {
-            expect(score).toBe(2);
+            expect(score).toBe(1);
         });
     });
 
