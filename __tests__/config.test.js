@@ -1,6 +1,6 @@
 describe('Tests the config module', () => {
     
-    let OLD_ENV;
+    const OLD_ENV = process.env;
 
     beforeAll(() => {
 

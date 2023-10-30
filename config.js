@@ -1,6 +1,5 @@
 require('dotenv').config();
 
-
 const getConfig = () => {
     const messesageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT);
     const oneBlockedPercent = Number.parseFloat(process.env.ONE_BLOCKED_PERCENT);

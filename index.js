@@ -2,21 +2,13 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore } = require('./scoring');
-
+const { oneBlockedMessage } = require('./one-blocked-message');
 
 /**
  * Gets the config but cleans out any values that should be secret.
  */
 const getCleansedConfig = () => ({ ... config, Token: undefined });
 
-/**
- * Determines if the user is one of the realest mother fuckers there is.
- * @param {string } username the query
- * @returns {boolean} true if user is one of the realest;
- */
-function isRealest(username) {
-    return config.TheRealests.some((k) => k.toLocaleLowerCase() === username);
-}
 
 const client = new Client({ 
     intents: [
@@ -39,19 +31,9 @@ client.on('messageCreate', async (initialQuery) => {
     else if (initialQuery.content.indexOf('!s ') == 0) {
         console.log('Quoting user ' + initialQuery.author.username);
 
-        const isARealOne = isRealest(initialQuery.author.username);
-        if (isARealOne)
-        {
-            console.debug('One of the realest', initialQuery.author.username);
+        if (oneBlockedMessage(initialQuery)) {
+            return;
         }
-        const randomVal = Math.random() * 100;
-        const triggerPecentage = 100 - (isARealOne ? config.RealestOneBlockedPercent : config.OneBlockedPercent);
-        console.debug(`Random Value: ${randomVal} - Trigger:  ${triggerPecentage}.`);
-        if(randomVal > triggerPecentage)
-        {
-                initialQuery.channel.send(initialQuery.author.toString() + ' who is one blocked message');
-                return;
-        }       
         
         let channel = initialQuery.channel;
         
@@ -64,6 +46,10 @@ client.on('messageCreate', async (initialQuery) => {
     }
     else if (initialQuery.content.indexOf('!score ') == 0)
     { 
+        if (oneBlockedMessage(initialQuery)) {
+            return;
+        }
+
         const phrase = initialQuery.content.replace(/^!score/, '').trim();
         getScore(phrase, score => {
             initialQuery.channel.send(`Score *${phrase}*: ${score}`);
