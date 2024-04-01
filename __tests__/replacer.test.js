@@ -8,10 +8,6 @@ const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../re
  
 describe('Tests the replacer module', () => {
 
-    beforeAll(() => {        
-        
-    });
-
     const messages = [
         'No I used this for my demo so I could justify going hog wild',
         'lol is this why you went so hog wild getting the environment set up like a real project instead of brans script kiddy level hackery?',

@@ -36,7 +36,7 @@ client.on('messageCreate', async (initialQuery) => {
         }
         
         let channel = initialQuery.channel;
-        // TODO: we need to encapsulate all thse calls to repalcer functions in another module because SOLID        
+        // TODO: we need to encapsulate all thse calls to replacer functions in another module because SOLID        
         const messages = await channel.messages.fetch({ limit: config.MessageFetchCount});
         const splitMessage = splitReplaceCommand(initialQuery.content);
         if(!splitMessage.isBlockedPhrase) {
