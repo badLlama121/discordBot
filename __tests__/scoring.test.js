@@ -24,7 +24,8 @@ describe('Tests for the scoring module', () => {
             'urch++',
             'poly--',
             'urch++',
-            'urch--'
+            'urch--',
+            'exercise one uncovered line',
         ].forEach(async (phrase) => {
             await processScores({ content: phrase });
         });

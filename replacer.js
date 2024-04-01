@@ -1,3 +1,5 @@
+const config = require('./config').getConfig();
+
 /**
  * Function that takes a string and then returns a "dumbed down" version 
  * of it. Without smart quotes, etc.
@@ -88,16 +90,29 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
  * Takes the replace message and turn it into a searh regex and a replace message
  * 
  * @param {string} replaceCommand 
- * @returns {{search:RegExp, replacement:string}}
+ * @returns {{search:RegExp, isBlockedPhrase:boolean, replacement:string}}
  */
 function splitReplaceCommand(replaceCommand) {
     var response = replaceCommand.replace(/!s /, '').split('/');
     const search = new RegExp(response[0].unicodeToMerica(), 'gi');
+    const replacement = response[1];
 
     return {
         search,
-        replacement: response[1]
+        isBlockedPhrase: isBlockedSearchPhrase(response[0]) || isBlockedSearchPhrase(replacement),
+        replacement
     };
+}
+
+/**
+ * Indicates if a phrase is blocekd from search and replace.
+ * @param {string} phrase The phrase to check to see if its blocked.
+ * @returns true if the phrase is blocked. False otherwise.
+ */
+function isBlockedSearchPhrase(phrase) {
+    return config
+        .SearchPhrasesToBlock
+        .findIndex(blockedPhrase => phrase.match(new RegExp(blockedPhrase.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), 'iu'))) > -1;
 }
 
 module.exports = {

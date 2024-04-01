@@ -1,5 +1,13 @@
- const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../replacer');
+jest.mock('../config');
+const config = require('../config');
+config.getConfig.mockReturnValue({
+    SearchPhrasesToBlock: ['boogers', 'dong']
+});
+const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../replacer');
+
+ 
 describe('Tests the replacer module', () => {
+
     const messages = [
         'No I used this for my demo so I could justify going hog wild',
         'lol is this why you went so hog wild getting the environment set up like a real project instead of brans script kiddy level hackery?',
@@ -9,7 +17,8 @@ describe('Tests the replacer module', () => {
         'I guess I could get back to working on the bot but honestly I haven’t written code for a living since 2006, zippy would run circles around me',
         'This is a sample string with a URL https://www.example.com and another URL http://www.example.org',
         'This is not the only version, this is just an example',
-        'oo https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz oo'
+        'oo https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz oo',
+        'I have boogers',
     ].map(content => ({ 
         content,
         author: 'author'  
@@ -78,6 +87,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
+        expect(sut.isBlockedPhrase).toBe(false);
         expect(channel.send).toBeCalledWith(expected);
     });
       
@@ -87,7 +97,22 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
+        expect(sut.isBlockedPhrase).toBe(false);
         expect(channel.send).toBeCalledWith(expected);
+    });
+
+    it('respects config.SearchPhrasesToBlock for the search', () => {
+        const sut = splitReplaceCommand('!s green boogers/ancedote');
+        
+        expect(sut.isBlockedPhrase).toBe(true);
+        expect(channel.send).not.toBeCalled();
+    });
+
+    it('respects config.SearchPhrasesToBlock for the replace', () => {
+        const sut = splitReplaceCommand('!s ancedote/dong');
+        
+        expect(sut.isBlockedPhrase).toBe(true);
+        expect(channel.send).not.toBeCalled();
     });
       
 });

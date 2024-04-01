@@ -1,6 +1,6 @@
 
 const { oneBlockedMessage } = require('../one-blocked-message');
-jest.mock('dotenv');
+
 jest.mock('../config', () => ({
         getConfig: () => ({TheRealests: [ 'testRealest' ],
         OneBlockedPercent: 1,

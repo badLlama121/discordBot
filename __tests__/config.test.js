@@ -2,14 +2,8 @@ describe('Tests the config module', () => {
     
     const OLD_ENV = process.env;
 
-    beforeAll(() => {
-
-    });
-
-    beforeEach(() => {
-        // If we mock this, then it just won't do anything, which is what we want to do.
-        jest.mock('dotenv');
-    });
+    // If we mock this, then it just won't do anything, which is what we want to do.
+    jest.mock('dotenv');
 
     afterEach(() => {
       jest.clearAllMocks();
@@ -29,7 +23,8 @@ describe('Tests the config module', () => {
             'RealestOneBlockedPercent': 5,
             'TheRealests': [
               'kerouac5',
-            ]
+            ],
+            'SearchPhrasesToBlock': [],
         });
     });
 
@@ -68,4 +63,9 @@ describe('Tests the config module', () => {
         expect(config.MessageFetchCount).toEqual(Number.parseInt(element));
     });
 
+    it.each([' ', '\t\n, ,', ',,,'])('Empty whitespace only value %s are ignored for SEARCH_PHRASES_TO_BLOCK', (element) => {
+        process.env.SEARCH_PHRASES_TO_BLOCK = element;
+        const config = require('../config').getConfig();
+        expect(config.SearchPhrasesToBlock).toEqual([]);
+    });
 });
