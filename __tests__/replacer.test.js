@@ -1,14 +1,15 @@
-const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../replacer');
+jest.mock('../config');
 const config = require('../config');
+config.getConfig.mockReturnValue({
+    SearchPhrasesToBlock: ['boogers', 'dong']
+});
+const { replaceFirstMessage, splitReplaceCommand, extractUrls } = require('../replacer');
+
  
 describe('Tests the replacer module', () => {
 
-    
-    beforeEach(() => {
-        jest.mock('../config');
-        config.getConfig.mockResolvedValue({
-            SearchPhrasesToBlock: ['boogers', 'dong']
-        });
+    beforeAll(() => {        
+        
     });
 
     const messages = [

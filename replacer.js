@@ -99,7 +99,7 @@ function splitReplaceCommand(replaceCommand) {
 
     return {
         search,
-        isBlockedPhrase: isBlockedSearchPhrase(response[0]) || isBlockedSearchPhrase(response),
+        isBlockedPhrase: isBlockedSearchPhrase(response[0]) || isBlockedSearchPhrase(replacement),
         replacement
     };
 }
