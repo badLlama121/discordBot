@@ -6,7 +6,7 @@
         "!./coverage/**"
       ],
       "clearMocks": true,
-      "coverageThreshold": {
+       "coverageThreshold": {
         "global": {
             "branches": 56,
             "functions": 75,

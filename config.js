@@ -4,6 +4,7 @@ const getConfig = () => {
     const messesageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT);
     const oneBlockedPercent = Number.parseFloat(process.env.ONE_BLOCKED_PERCENT);
     const realestOneBlockedPercentneBlockedPercent = Number.parseFloat(process.env.REALEST_ONE_BLOCKED_PERCENT);
+    const searchPhrasesToBlock = (process.env.SEARCH_PHRASES_TO_BLOCK ?? '').split(',').filter(phrase => phrase.trim() !== '');
 
     return {
         /**
@@ -36,6 +37,11 @@ const getConfig = () => {
          * Percentage change of getting "who is one blocked message" for the realest.
          */
         RealestOneBlockedPercent: (realestOneBlockedPercentneBlockedPercent >= 0) ? realestOneBlockedPercentneBlockedPercent : 5,
+
+        /**
+         * Phrases to ignore in a search and replace.
+         */
+        SearchPhrasesToBlock : searchPhrasesToBlock,
     
         /**
          * The discord token.
