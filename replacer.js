@@ -1,4 +1,6 @@
 const config = require('./config').getConfig();
+const removeMd = require('remove-markdown');
+
 
 /**
  * Function that takes a string and then returns a "dumbed down" version 
@@ -7,18 +9,26 @@ const config = require('./config').getConfig();
  * @param {string} strInput the input. 
  * @returns a cleaned version of the string.
  */
-function cleanseString(strInput) {
-    return strInput
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u2018\u2019]/g, '\'')
-        .replace(/\u2026/g, '...')
-        .replace(/\u2013/g, '-')
-        .replace(/\u2014/g, '--');
-}
+const cleanseString = (strInput) => strInput
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, '\'')
+    .replace(/\u2026/g, '...')
+    .replace(/\u2013/g, '-')
+    .replace(/\u2014/g, '--');
 
 /// because javascript gonna be javascript about this we can't use a lambda ere
 String.prototype.unicodeToMerica = function () { 
     return cleanseString(this); 
+};
+
+/// Lets remove the markdown
+String.prototype.deMarkDown = function () { 
+    const userExtractedString = extractUsers(this);
+    let replacePhrase = removeMd(userExtractedString.cleansed); 
+    userExtractedString.users?.forEach(user => {
+        replacePhrase = replacePhrase.replace('|{|user|}|', user);
+    });
+    return replacePhrase;
 };
 
 /**
@@ -34,7 +44,22 @@ function extractUrls(inputString) {
     const urls = inputString.match(urlRegex);
     const cleansed = inputString.replace(urlRegex, '|{|url|}|');
     return { cleansed, urls };
-  }
+}
+
+/**
+ * Takes a string as input and outputs an object with two properties: `cleansed` and `USERS`.
+ * The `cleansed` property contains the original string but with all users replaced with `|{|user|}|`.
+ * The `users` property is an array of all removed users.
+ *
+ * @param {string} inputString - The input string to cleanse.
+ * @returns {{cleansed: string, urls: string[]}} - An object with two properties: `cleansed` and `urls`.
+ */
+function extractUsers(inputString) {
+    const userRegex = /<@[0-9]+>/gi;
+    const users = inputString.match(userRegex);
+    const cleansed = inputString.replace(userRegex, '|{|user|}|');
+    return { cleansed, users };
+}
 
 /**
  * Does a replace on the first message that matches regex
@@ -54,7 +79,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
             return true;
         }
         
-        const cleansedMessage = extractUrls(msg.content.unicodeToMerica());
+        const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
         if(cleansedMessage.cleansed.search(regex) > -1) {
             console.log(`Match found for message ${msg.content} with regex ${regex}`);
 

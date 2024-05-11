@@ -19,6 +19,7 @@ describe('Tests the replacer module', () => {
         'This is not the only version, this is just an example',
         'oo https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz oo',
         'I have boogers',
+        '<@416708751500902411>  lives in an *attic* not a *condo*',
     ].map(content => ({ 
         content,
         author: 'author'  
@@ -35,7 +36,7 @@ describe('Tests the replacer module', () => {
         expect(' a'.replace(sut.search, sut.replacement)).toBe('b');
     });
     
-    it('tests that multiple concurrent replacementsi n asingle string get formatted correctly', () => {
+    it('tests that multiple concurrent replacements in a single string get formatted correctly', () => {
         const sut = splitReplaceCommand('!s z/t');
         const messages = [{
             content: 'nice peppy buzz',
@@ -79,6 +80,11 @@ describe('Tests the replacer module', () => {
             urls: ['https://www.example.com', 'http://www.example.org']
         };
         expect(extractUrls(inputString)).toEqual(expectedOutput);
+    });
+
+    it('cleanses string of username and cleanses markdown so that you can replace a phrase mid markdown', () => {
+        const actual = replaceFirstMessage(messages, 'an attic', 'hobbit hole', channel);
+        expect(actual).toBe(false);
     });
       
     it('does a replacement but ignored a url', () => {
