@@ -19,18 +19,25 @@ describe('Tests for the scoring module', () => {
         await getScore('urch', score => {
             expect(score).toBe(0);
         });
+        await getScore('🍺', score => {
+            expect(score).toBe(0);
+        });
         [
             'urch++',
             'urch++',
             'poly--',
             'urch++',
             'urch--',
+            '🍺++',
             'exercise one uncovered line',
         ].forEach(async (phrase) => {
             await processScores({ content: phrase });
         });
         await getScore('urch', score => {
             expect(score).toBe(2);
+        });
+        await getScore('🍺', score => {
+            expect(score).toBe(1);
         });
     });
 
