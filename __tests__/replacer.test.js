@@ -14,6 +14,8 @@ describe('Tests the replacer module', () => {
         '!s      hog wild/to the prom with another dude',
         '!s a real project/your boss made you',
         'We never added it officially. I made a hacky one that I never checked in, and before I did zippy made a big refactor and I never integrated',
+        'I don\'t like “find and replace”',
+        'I don\'t like "find and replace dumb"',
         'I guess I could get back to working on the bot but honestly I haven’t written code for a living since 2006, zippy would run circles around me',
         'This is a sample string with a URL https://www.example.com and another URL http://www.example.org',
         'This is not the only version, this is just an example',
@@ -34,6 +36,26 @@ describe('Tests the replacer module', () => {
 
         expect('a'.replace(sut.search, sut.replacement)).toBe('a');
         expect(' a'.replace(sut.search, sut.replacement)).toBe('b');
+    });
+
+    it('handles smart quotes in the searched for', () => {
+        const sut = splitReplaceCommand('!s "find and replace"/hurkle durkle');
+
+        const expected = 'author I don\'t like **hurkle durkle**';
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith(expected);
+    });
+
+    it('handles smart quotes in the search expression', () => {
+        const sut = splitReplaceCommand('!s “find and replace dumb”/hurkle durkle');
+
+        const expected = 'author I don\'t like **hurkle durkle**';
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith(expected);
     });
     
     it('tests that multiple concurrent replacements in a single string get formatted correctly', () => {
