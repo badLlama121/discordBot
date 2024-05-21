@@ -44,23 +44,27 @@ function processScores(message) {
     const lines = message.content.split(/[\r\n]+/);
     lines.map(line =>  {
         let score = 0;
+        let phrase = undefined;
         if (line.endsWith('++'))
         {
             score = 1;
+            phrase = line.replace(/\s*[+]+$/, '');
         }
-        else if (/^(✨ ?)+[^✨]+(✨ ?)+/.test(line)) 
+        else if (/^(✨ ?)+[^✨]+(✨ ?)+$/.test(line)) 
         {
             score = 1;
+            phrase = line.match(/^(✨ ?)+([^✨]+)(✨ ?)+$/)[2];
         }
         else if (['--', '–', '—', ].findIndex(str => line.endsWith(str)) > -1)
         {
             score = -1;
+            phrase = line.replace(/\s*[-–—]+$/, '');
         }
         else 
         {
             return;
         }
-        const phrase = line.replace(/\W*[+-——✨]$/, '');
+
         createSchema(db);
 
         const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
