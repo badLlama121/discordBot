@@ -48,7 +48,11 @@ function processScores(message) {
         {
             score = 1;
         }
-        else if (line.endsWith('--'))
+        else if (/^(✨ ?)+[^✨]+(✨ ?)+/.test(line)) 
+        {
+            score = 1;
+        }
+        else if (['--', '–', '—', ].findIndex(str => line.endsWith(str)) > -1)
         {
             score = -1;
         }
@@ -56,7 +60,7 @@ function processScores(message) {
         {
             return;
         }
-        const phrase = line.replace(/\W*[+-]$/, '');
+        const phrase = line.replace(/\W*[+-——✨]$/, '');
         createSchema(db);
 
         const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
