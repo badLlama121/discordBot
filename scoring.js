@@ -64,7 +64,7 @@ function processScores(message) {
         {
             return;
         }
-    
+
         createSchema(db);
 
         const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
