@@ -24,7 +24,10 @@ String.prototype.unicodeToMerica = function () {
 /// Lets remove the markdown
 String.prototype.deMarkDown = function () { 
     const userExtractedString = extractUsers(this);
-    let replacePhrase = removeMd(userExtractedString.cleansed); 
+    let replacePhrase = extractGtAndLt(userExtractedString.cleansed);
+    replacePhrase = removeMd(replacePhrase)
+        .replace('{LESS_THAN}', '<')
+        .replace('{GREATER_THAN}', '>');
     userExtractedString.users?.forEach(user => {
         replacePhrase = replacePhrase.replace('|{|user|}|', user);
     });
@@ -59,6 +62,18 @@ function extractUsers(inputString) {
     const users = inputString.match(userRegex);
     const cleansed = inputString.replace(userRegex, '|{|user|}|');
     return { cleansed, users };
+}
+
+/**
+ * Takes a string as input and replaces all balanced < and > symols with {LESS_THAN} and {GREATER_THAN}.
+ *
+ * @param {string} inputString - The input string to cleanse.
+ * @returns {string} - The cleansed string.
+ */
+function extractGtAndLt(inputString) {
+    const userRegex = /<(.*)>/gi;
+    const cleansed = inputString.replace(userRegex, '{LESS_THAN}$1{GREATER_THAN}');
+    return cleansed;
 }
 
 /**

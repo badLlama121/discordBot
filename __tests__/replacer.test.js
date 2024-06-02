@@ -22,6 +22,7 @@ describe('Tests the replacer module', () => {
         'oo https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz oo',
         'I have boogers',
         '<@416708751500902411>  lives in an *attic* not a *condo*',
+        'I am a <dumb person>',
     ].map(content => ({ 
         content,
         author: 'author'  
@@ -141,6 +142,15 @@ describe('Tests the replacer module', () => {
         
         expect(sut.isBlockedPhrase).toBe(true);
         expect(channel.send).not.toBeCalled();
+    });
+
+    it('doesnt strip angle brackets', () => {
+        const sut = splitReplaceCommand('!s dumb person/CTO');
+
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith('author I am a <**CTO**>');
     });
       
 });
