@@ -143,5 +143,14 @@ describe('Tests the replacer module', () => {
         expect(sut.isBlockedPhrase).toBe(true);
         expect(channel.send).not.toBeCalled();
     });
+
+    it('doesnt strip angle brackets', () => {
+        const sut = splitReplaceCommand('!s dumb person/CTO');
+
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+        
+        expect(actual).toBe(false);
+        expect(channel.send).toBeCalledWith('author I am a <**CTO**>');
+    });
       
 });
