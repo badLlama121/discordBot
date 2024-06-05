@@ -73,7 +73,7 @@ describe('Tests the replacer module', () => {
     });
 
     it.each(['', null, undefined, false, 0])('tests the case for no replacement', (emptyIshStringIsh) => {
-        const regex = new RegExp('hog wild', 'gi');
+        const regex = 'hog wild';
         const actual = replaceFirstMessage(messages, regex, emptyIshStringIsh, channel);
 
         expect(actual).toBe(false);
@@ -81,7 +81,7 @@ describe('Tests the replacer module', () => {
     });
     
     it('tests that the first match is what is returned', () => {
-        const regex = new RegExp('hog wild', 'gi');
+        const regex = 'hog wild';
         const actual = replaceFirstMessage(messages, regex, 'the budget', channel);
 
         expect(actual).toBe(false);
