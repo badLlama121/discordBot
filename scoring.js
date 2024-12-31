@@ -1,9 +1,7 @@
-const Database = require('better-sqlite3');
-const config = require('./config').getConfig();
+const { getDatabase } = require('./db');
 
-const db = new Database(config.ScoreDatabase);
-db.pragma('journal_mode = WAL');
-
+const db = getDatabase();
+let schemaCreated = false;
 
 /**
  * Runs the schema creation commands;
@@ -11,9 +9,12 @@ db.pragma('journal_mode = WAL');
  * @param {Database} db the datbase. 
  */
 function createSchema(db) {
-    
+    if (schemaCreated === true) {
+        return;
+    } 
     db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
     db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase  COLLATE NOCASE);').run();
+    schemaCreated = true;
 }
 
 /**
