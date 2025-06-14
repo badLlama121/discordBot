@@ -46,7 +46,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith(expected);
     });
 
     it('handles smart quotes in the search expression', () => {
@@ -56,7 +56,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith(expected);
     });
     
     it('tests that multiple concurrent replacements in a single string get formatted correctly', () => {
@@ -69,7 +69,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith(expected);
     });
 
     it.each(['', null, undefined, false, 0])('tests the case for no replacement', (emptyIshStringIsh) => {
@@ -77,7 +77,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, regex, emptyIshStringIsh, channel);
 
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith('author No I used this for my demo so I could justify going ');
+        expect(channel.send).toHaveBeenCalledWith('author No I used this for my demo so I could justify going ');
     });
     
     it('tests that the first match is what is returned', () => {
@@ -85,7 +85,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, regex, 'the budget', channel);
 
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith('author No I used this for my demo so I could justify going **the budget**');
+        expect(channel.send).toHaveBeenCalledWith('author No I used this for my demo so I could justify going **the budget**');
     });
     
     it('tests that the no match leads to a true return', () => {
@@ -93,7 +93,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, regex, 'the budget', channel);
 
         expect(actual).toBe(true);
-        expect(channel.send).not.toBeCalled();
+        expect(channel.send).not.toHaveBeenCalled();
     });
 
     it('cleanses string and returns URLs', () => {
@@ -117,7 +117,7 @@ describe('Tests the replacer module', () => {
         
         expect(actual).toBe(false);
         expect(sut.isBlockedPhrase).toBe(false);
-        expect(channel.send).toBeCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith(expected);
     });
       
     it('does not match when only the url matches', () => {
@@ -127,21 +127,21 @@ describe('Tests the replacer module', () => {
         
         expect(actual).toBe(false);
         expect(sut.isBlockedPhrase).toBe(false);
-        expect(channel.send).toBeCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith(expected);
     });
 
     it('respects config.SearchPhrasesToBlock for the search', () => {
         const sut = splitReplaceCommand('!s green boogers/ancedote');
         
         expect(sut.isBlockedPhrase).toBe(true);
-        expect(channel.send).not.toBeCalled();
+        expect(channel.send).not.toHaveBeenCalled();
     });
 
     it('respects config.SearchPhrasesToBlock for the replace', () => {
         const sut = splitReplaceCommand('!s ancedote/dong');
         
         expect(sut.isBlockedPhrase).toBe(true);
-        expect(channel.send).not.toBeCalled();
+        expect(channel.send).not.toHaveBeenCalled();
     });
 
     it('doesnt strip angle brackets', () => {
@@ -150,7 +150,7 @@ describe('Tests the replacer module', () => {
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
         
         expect(actual).toBe(false);
-        expect(channel.send).toBeCalledWith('author I am a <**CTO**>');
+        expect(channel.send).toHaveBeenCalledWith('author I am a <**CTO**>');
     });
       
 });
