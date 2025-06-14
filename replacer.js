@@ -5,6 +5,9 @@ const removeMd = require('remove-markdown');
 function replaceAll(str, find, newToken, ignoreCase)
 {
     let i = -1;
+    if (!newToken) {
+        newToken = '';
+    }
 
     if (!str)
     {
@@ -129,18 +132,18 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
         
         const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
         if(cleansedMessage.cleansed.search(regex) > -1) {
-            console.log(`Match found for message ${msg.content} with regex ${regex}`);
+            console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
 
             let replacePhrase = '';
             if(replacement?.length > 0) {
                 replacePhrase = cleansedMessage.cleansed
-                    .replace(regex, '\v' + replacement + '\v')
+                    .replaceAll(regex, '\v' + replacement + '\v')
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
 
             }
             else {
-                replacePhrase = replaceAll(msg.content, msg.search, msg.replace, true);
+                replacePhrase = replaceAll(msg.content, regex, replacement, true);
             }
             cleansedMessage.urls?.forEach(url => {
                 replacePhrase = replacePhrase.replace('|{|url|}|', url);
