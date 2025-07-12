@@ -9,15 +9,6 @@ function replaceAll(str, find, newToken, ignoreCase)
         newToken = '';
     }
 
-    if (!str)
-    {
-        // Instead of throwing, act as COALESCE if find == null/empty and str == null
-        if ((str == null) && (find == null))
-            return newToken;
-
-        return str;
-    }
-
     if (!find) // sanity check 
         return str;
 

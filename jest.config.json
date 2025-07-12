@@ -8,6 +8,7 @@
       "clearMocks": true,
       "resetMocks": true,
       "resetModules": true,
+      "collectCoverage": true,
        "coverageThreshold": {
         "global": {
             "branches": 59,
