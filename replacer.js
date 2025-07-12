@@ -2,6 +2,33 @@ const config = require('./config').getConfig();
 const removeMd = require('remove-markdown');
 
 
+function replaceAll(str, find, newToken, ignoreCase)
+{
+    let i = -1;
+    if (!newToken) {
+        newToken = '';
+    }
+
+    if (!find) // sanity check 
+        return str;
+
+    ignoreCase = ignoreCase || false;
+    find = ignoreCase ? find.toLowerCase() : find;
+
+    while ((
+        i = (ignoreCase ? str.toLowerCase() : str).indexOf(
+            find, i >= 0 ? i + newToken.length : 0
+        )) !== -1
+    )
+    {
+        str = str.substring(0, i) +
+            newToken +
+            str.substring(i + find.length);
+    } // Whend 
+
+    return str;
+}
+
 /**
  * Function that takes a string and then returns a "dumbed down" version 
  * of it. Without smart quotes, etc.
@@ -87,6 +114,12 @@ function extractGtAndLt(inputString) {
  * @returns {boolean}
  */
 function replaceFirstMessage(messages, regex, replacement, channel) {
+    if(! regex.toLocaleLowerCase) {
+        return true;
+    }
+    
+    const lowerCaseSearch = regex.toLocaleLowerCase();
+
     return messages.every(msg => {
         if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
             console.debug('Ignoring message from bot or search message');
@@ -95,19 +128,19 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
         }
         
         const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
-        if(cleansedMessage.cleansed.search(regex) > -1) {
-            console.log(`Match found for message ${msg.content} with regex ${regex}`);
+        if(cleansedMessage.cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
+            console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
 
             let replacePhrase = '';
             if(replacement?.length > 0) {
                 replacePhrase = cleansedMessage.cleansed
-                    .replace(regex, '\v' + replacement + '\v')
+                    .replaceAll(regex, '\v' + replacement + '\v')
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
 
             }
             else {
-                replacePhrase = msg.content.replace(regex, '');
+                replacePhrase = replaceAll(msg.content, regex, replacement, true);
             }
             cleansedMessage.urls?.forEach(url => {
                 replacePhrase = replacePhrase.replace('|{|url|}|', url);
@@ -134,7 +167,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
  */
 function splitReplaceCommand(replaceCommand) {
     var response = replaceCommand.replace(/!s /, '').split('/');
-    const search = new RegExp(response[0].unicodeToMerica(), 'gi');
+    const search = response[0].unicodeToMerica();
     const replacement = response[1];
 
     return {
