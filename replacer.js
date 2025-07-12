@@ -123,6 +123,12 @@ function extractGtAndLt(inputString) {
  * @returns {boolean}
  */
 function replaceFirstMessage(messages, regex, replacement, channel) {
+    if(! regex.toLocaleLowerCase) {
+        return true;
+    }
+    
+    const lowerCaseSearch = regex.toLocaleLowerCase();
+
     return messages.every(msg => {
         if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
             console.debug('Ignoring message from bot or search message');
@@ -131,7 +137,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
         }
         
         const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
-        if(cleansedMessage.cleansed.search(regex) > -1) {
+        if(cleansedMessage.cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
             console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
 
             let replacePhrase = '';

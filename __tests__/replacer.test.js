@@ -152,5 +152,15 @@ describe('Tests the replacer module', () => {
         expect(actual).toBe(false);
         expect(channel.send).toHaveBeenCalledWith('author I am a <**CTO**>');
     });
+
+    it('handles search strings that are regexes', () => {
+        const sut = splitReplaceCommand('!s ?/!');
+        const expected = 'author lol is this why you went so hog wild getting the environment set up like a real project instead of brans script kiddy level hackery**!**';
+
+        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
+
+        expect(actual).toBe(false);
+        expect(channel.send).toHaveBeenCalledWith(expected);
+    });
       
 });
