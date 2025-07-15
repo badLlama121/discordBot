@@ -117,13 +117,12 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
             let replacePhrase = '';
             if (typeof replacement === 'string' && replacement.length > 0) {
                 // Use replacement if it's a non-empty string
-                replacePhrase = cleansedMessage.cleansed
-                    .replaceAll(regex, '\v' + replacement + '\v')
+                replacePhrase = replaceAll(cleansedMessage.cleansed, regex, '\v' + replacement + '\v', true)
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
             } else {
                 // For empty string, null, undefined, false, 0, remove the matched phrase
-                replacePhrase = cleansedMessage.cleansed.replaceAll(regex, '');
+                replacePhrase = replaceAll(cleansedMessage.cleansed, regex, '', true);
             }
             cleansedMessage.urls?.forEach(url => {
                 replacePhrase = replacePhrase.replace('|{|url|}|', url);
