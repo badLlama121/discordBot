@@ -3,7 +3,7 @@ const removeMd = require('remove-markdown');
 
 
 function replaceAll(str, find, newToken = '', ignoreCase = false) {
-    if (!find) return str;
+    if (find === null || find === undefined || find === '') return str;
 
     if (ignoreCase) {
         // Escape special regex characters in 'find'
@@ -109,36 +109,29 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
     return messages.every(msg => {
         if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
             console.debug('Ignoring message from bot or search message');
-
             return true;
         }
-        
         const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
         if(cleansedMessage.cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
             console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
-
             let replacePhrase = '';
-            if(replacement?.length > 0) {
+            if (typeof replacement === 'string' && replacement.length > 0) {
+                // Use replacement if it's a non-empty string
                 replacePhrase = cleansedMessage.cleansed
                     .replaceAll(regex, '\v' + replacement + '\v')
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
-
-            }
-            else {
-                replacePhrase = replaceAll(msg.content, regex, replacement, true);
+            } else {
+                // For empty string, null, undefined, false, 0, remove the matched phrase
+                replacePhrase = cleansedMessage.cleansed.replaceAll(regex, '');
             }
             cleansedMessage.urls?.forEach(url => {
                 replacePhrase = replacePhrase.replace('|{|url|}|', url);
             });
             channel.send(msg.author.toString() + ' ' + replacePhrase);
-
             return false;
-        }
-        else
-        {
+        } else {
             console.debug(`Message '${msg.content}' did not match search string '${regex}'`);
-
             return true;
         }
     });
