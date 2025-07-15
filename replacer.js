@@ -1,31 +1,16 @@
 const config = require('./config').getConfig();
 const removeMd = require('remove-markdown');
 
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-function replaceAll(str, find, newToken, ignoreCase)
+function replaceAll(input, search, replacement, ignoreCase)
 {
-    let i = -1;
-    if (!newToken) {
-        newToken = '';
-    }
-
-    if (!find) // sanity check 
-        return str;
-
-    ignoreCase = ignoreCase || false;
-    find = ignoreCase ? find.toLowerCase() : find;
-
-    while ((
-        i = (ignoreCase ? str.toLowerCase() : str).indexOf(
-            find, i >= 0 ? i + newToken.length : 0
-        )) !== -1
-    )
-    {
-        str = str.substring(0, i) +
-            newToken +
-            str.substring(i + find.length);
-    } // Whend 
-
+  if (!search) return input; // avoid replacing empty string
+  const escapedSearch = escapeRegExp(search);
+  const regex = new RegExp(escapedSearch, 'gi');
+  return input.replace(regex, replacement);
     return str;
 }
 
