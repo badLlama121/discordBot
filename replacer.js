@@ -107,7 +107,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
     const lowerCaseSearch = regex.toLocaleLowerCase();
 
     return messages.every(msg => {
-        if(msg.author.bot || msg.content.toString().indexOf('!s') > -1) {
+        if(msg.author.bot || msg.content.toString().indexOf('!s') === 0) {
             console.debug('Ignoring message from bot or search message');
             return true;
         }
@@ -144,13 +144,14 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
  * @returns {{search:RegExp, isBlockedPhrase:boolean, replacement:string}}
  */
 function splitReplaceCommand(replaceCommand) {
-    var response = replaceCommand.replace(/!s /, '').split('/');
-    const search = response[0].unicodeToMerica();
-    const replacement = response[1];
+    const withoutCommand = replaceCommand.replace(/!s /, '');
+    const slashIndex = withoutCommand.indexOf('/');
+    const search = (slashIndex === -1 ? withoutCommand : withoutCommand.slice(0, slashIndex)).unicodeToMerica();
+    const replacement = slashIndex === -1 ? undefined : withoutCommand.slice(slashIndex + 1);
 
     return {
         search,
-        isBlockedPhrase: isBlockedSearchPhrase(response[0]) || isBlockedSearchPhrase(replacement),
+        isBlockedPhrase: isBlockedSearchPhrase(search) || (replacement !== undefined && isBlockedSearchPhrase(replacement)),
         replacement
     };
 }
