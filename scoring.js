@@ -74,7 +74,37 @@ function processScores(message) {
     
 }
 
+/**
+ * Gets the top and bottom phrases by score delta over the last 7 days.
+ *
+ * @param {number} limit Number of phrases to return for each end.
+ * @returns {string} Formatted message ready to send to Discord.
+ */
+function getTrending(limit = 5) {
+    createSchema(db);
+    const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const rows = db.prepare(`
+        SELECT phrase, SUM(score) as total
+        FROM scoring
+        WHERE timestamp >= ?
+        GROUP BY phrase COLLATE NOCASE
+        HAVING total != 0
+        ORDER BY total DESC
+    `).all(since);
+
+    const top = rows.slice(0, limit);
+    const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();
+
+    const fmt = (rows, label) => {
+        if (rows.length === 0) return `*${label}: none*`;
+        return `**${label}**\n` + rows.map((r, i) => `${i + 1}. ${r.phrase} (${r.total > 0 ? '+' : ''}${r.total})`).join('\n');
+    };
+
+    return `Trending last 7 days:\n${fmt(top, 'Top 5')}\n\n${fmt(bottom, 'Bottom 5')}`;
+}
+
 module.exports = {
     getScore,
+    getTrending,
     processScores
 };

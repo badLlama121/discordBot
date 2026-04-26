@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
-const { processScores, getScore } = require('./scoring');
+const { processScores, getScore, getTrending } = require('./scoring');
 const { oneBlockedMessage } = require('./one-blocked-message');
 
 /**
@@ -45,6 +45,10 @@ client.on('messageCreate', async (initialQuery) => {
                 initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
             }
         }
+    }
+    else if (initialQuery.content.indexOf('!trending') === 0)
+    {
+        initialQuery.channel.send(getTrending(5));
     }
     else if (initialQuery.content.indexOf('!score ') == 0)
     { 

@@ -66,6 +66,42 @@ describe('Tests for the scoring module', () => {
         
     });
 
+    it('getTrending returns formatted top and bottom phrases from the last 7 days', async () => {
+        const { processScores, getTrending } = require('../scoring');
+        const phrases = [
+            'pizza++', 'pizza++', 'pizza++',
+            'jazz++', 'jazz++',
+            'mondays--', 'mondays--', 'mondays--',
+            'meetings--',
+        ];
+        phrases.forEach(p => processScores({ content: p }));
+
+        const result = getTrending(2);
+        expect(result).toContain('pizza (+3)');
+        expect(result).toContain('jazz (+2)');
+        expect(result).toContain('mondays (-3)');
+        expect(result).toContain('meetings (-1)');
+    });
+
+    it('getTrending shows none when no data', async () => {
+        const { getTrending } = require('../scoring');
+        const result = getTrending(5);
+        expect(result).toContain('Top 5: none');
+        expect(result).toContain('Bottom 5: none');
+    });
+
+    it('getTrending excludes scores older than 7 days', async () => {
+        const { processScores, getTrending } = require('../scoring');
+        const { getDatabase } = require('../db');
+        processScores({ content: 'pizza++' });
+        const db = getDatabase();
+        const oldTimestamp = Date.now() - 8 * 24 * 60 * 60 * 1000;
+        db.prepare('INSERT INTO scoring (timestamp, phrase, score) VALUES (?, ?, ?)').run(oldTimestamp, 'ancient history', 10);
+
+        const result = getTrending(5);
+        expect(result).not.toContain('ancient history');
+    });
+
     it('handles multiline scores', async () => {
         const { processScores, getScore } = require('../scoring');
         await getScore('urch', score => {
