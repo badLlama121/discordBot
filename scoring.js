@@ -2,7 +2,7 @@ const { getDatabase } = require('./db');
 
 const db = getDatabase();
 
-// Compiled once — used in every processScores call.
+// Compiled once — used in parseScoreLine on every processed message.
 const SPARKLE_RE = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
 
 // Schema and prepared statements are initialized at module load. Because Jest

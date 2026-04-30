@@ -26,7 +26,7 @@ function oneBlockedMessage(message) {
     console.debug(`oneBlockedMessage: random=${randomVal.toFixed(2)}, threshold=${triggerPercentage}, user=${message.author.username}, realest=${isARealOne}`);
 
     if (randomVal > triggerPercentage) {
-        message.channel.send(message.author.toString() + ' who is one blocked message');
+        message.channel.send(`${message.author} who is one blocked message`);
         return true;
     }
 

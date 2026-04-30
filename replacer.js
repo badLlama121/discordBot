@@ -142,6 +142,27 @@ function replaceOccurrences(str, find, replacement = '') {
 }
 
 /**
+ * Replaces `searchTerm` in `text`, bolding the replacement. If `replacement`
+ * is empty or absent, the matched phrase is deleted instead.
+ *
+ * Uses \v as a temporary bold delimiter. Adjacent \v pairs collapse before the
+ * final conversion so consecutive matches produce **onerun** not **one****two**.
+ *
+ * @param {string} text
+ * @param {string} searchTerm
+ * @param {string | undefined} replacement
+ * @returns {string}
+ */
+function applyReplacement(text, searchTerm, replacement) {
+    if (typeof replacement !== 'string' || !replacement) {
+        return replaceOccurrences(text, searchTerm);
+    }
+    return replaceOccurrences(text, searchTerm, `\v${replacement}\v`)
+        .replace(/\v\v/g, '')
+        .replace(/\v/g, '**');
+}
+
+/**
  * Searches `messages` for the first non-bot, non-command message containing
  * `searchTerm`, then sends a copy to `channel` with the match **bolded** as
  * `replacement`. Returns `true` if no match was found, `false` if one was sent.
@@ -179,18 +200,7 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
 
         console.log(`Match found in "${msg.content}" for "${searchTerm}"`);
 
-        let result;
-        if (typeof replacement === 'string' && replacement.length > 0) {
-            // Wrap the replacement with \v as a temporary bold marker.
-            // Adjacent markers collapse (\v\v → '') so consecutive matches yield
-            // a single **bold run** rather than an ugly ****empty gap****.
-            result = replaceOccurrences(cleansed, searchTerm, `\v${replacement}\v`)
-                .replace(/\v\v/g, '')
-                .replace(/\v/g, '**');
-        } else {
-            result = replaceOccurrences(cleansed, searchTerm);
-        }
-
+        let result = applyReplacement(cleansed, searchTerm, replacement);
         entities?.forEach(e  => { result = result.replace(ENTITY_PLACEHOLDER, e);   });
         urls?.forEach(url    => { result = result.replace(URL_PLACEHOLDER,    url);  });
 
