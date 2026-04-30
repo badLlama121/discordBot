@@ -9,8 +9,16 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 // Schema and prepared statements are initialized at module load. Because Jest
 // uses resetModules: true, each test gets a fresh module (and a fresh :memory:
 // database), so eager initialization is equivalent to lazy for test isolation.
-db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
-db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE);').run();
+db.prepare(`
+    CREATE TABLE IF NOT EXISTS scoring (
+        timestamp INT    NULL,
+        message   TEXT   NULL,
+        author    TEXT   NULL,
+        phrase    TEXT   NOT NULL,
+        score     NUMBER NOT NULL
+    )
+`).run();
+db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE)').run();
 
 const insertStmt   = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
 const getScoreStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE');
@@ -42,7 +50,7 @@ function getScore(phrase) {
  *   ✨phrase✨         → +1
  *
  * @param {string} line
- * @returns {{ phrase: string, score: number } | null}
+ * @returns {{ score: number, phrase: string } | null}
  */
 function parseScoreLine(line) {
     if (line.endsWith('++'))

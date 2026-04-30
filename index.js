@@ -35,7 +35,7 @@ client.on('messageCreate', async (message) => {
         if (!cmd.isBlockedPhrase) {
             const failedToFind = replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
             if (failedToFind) {
-                message.channel.send(`${message.author} nobody said that, dumb ass`);
+                channel.send(`${message.author} nobody said that, dumb ass`);
             }
         }
     }
