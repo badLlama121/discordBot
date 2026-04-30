@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore, getTrending } = require('./scoring');
-const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand } = require('./reactions');
+const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand, registerProxyMessage } = require('./reactions');
 const { oneBlockedMessage } = require('./one-blocked-message');
 
 const getCleansedConfig = () => ({ ...config, Token: undefined });
@@ -38,9 +38,11 @@ client.on('messageCreate', async (message) => {
         if (!cmd.isBlockedPhrase) {
             const channel = message.channel;
             const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
-            const failedToFind = replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
-            if (failedToFind) {
+            const sentMsg = await replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
+            if (!sentMsg) {
                 channel.send(`${message.author} nobody said that, dumb ass`);
+            } else {
+                registerProxyMessage(sentMsg.id, message.author.id);
             }
         }
     }

@@ -187,7 +187,8 @@ function applyReplacement(text, searchTerm, replacement) {
 /**
  * Searches `messages` for the first non-bot, non-command message containing
  * `searchTerm`, then sends a copy to `channel` with the match **bolded** as
- * `replacement`. Returns `true` if no match was found, `false` if one was sent.
+ * `replacement`. Returns the sent Message on success, or `null` if no match
+ * was found.
  *
  * Discord entities and URLs are extracted as opaque placeholders before searching,
  * so their internal content can neither match the search term nor be corrupted
@@ -196,18 +197,18 @@ function applyReplacement(text, searchTerm, replacement) {
  * @param {Iterable<{ content: string, author: any }>} messages
  * @param {string} searchTerm
  * @param {string | undefined} replacement - Falsy to delete the matched phrase.
- * @param {{ send: (msg: string) => void }} channel
- * @returns {boolean}
+ * @param {{ send: (msg: string) => Promise<import('discord.js').Message> }} channel
+ * @returns {Promise<import('discord.js').Message | null>}
  */
-function replaceFirstMessage(messages, searchTerm, replacement, channel) {
-    if (typeof searchTerm !== 'string' || !searchTerm) return true;
+async function replaceFirstMessage(messages, searchTerm, replacement, channel) {
+    if (typeof searchTerm !== 'string' || !searchTerm) return null;
 
     const lowerSearch = searchTerm.toLocaleLowerCase();
 
-    return messages.every(msg => {
+    for (const msg of messages) {
         if (msg.author.bot || String(msg.content).startsWith('!s')) {
             console.debug('Skipping bot message or !s command');
-            return true;
+            continue;
         }
 
         const { cleansed: withoutEntities, entities } = extractDiscordEntities(
@@ -217,7 +218,7 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
 
         if (!cleansed.toLocaleLowerCase().includes(lowerSearch)) {
             console.debug(`No match in "${msg.content}" for "${searchTerm}"`);
-            return true;
+            continue;
         }
 
         console.log(`Match found in "${msg.content}" for "${searchTerm}"`);
@@ -226,9 +227,10 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
         result = reinsert(result, ENTITY_PLACEHOLDER, entities);
         result = reinsert(result, URL_PLACEHOLDER, urls);
 
-        channel.send(`${msg.author} ${result}`);
-        return false;
-    });
+        return channel.send(`${msg.author} ${result}`);
+    }
+
+    return null;
 }
 
 /**

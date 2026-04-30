@@ -70,6 +70,23 @@ function parseLeaderCommand(content) {
     };
 }
 
+// Maps bot message IDs to the user ID who should receive reaction credit.
+// Populated by registerProxyMessage when the bot sends a !s reply on behalf
+// of the command issuer.
+const proxyAuthors = new Map();
+
+/**
+ * Registers a bot-sent message as a proxy for a user's `!s` command, so that
+ * emoji reactions to that bot message credit the command issuer rather than
+ * the bot.
+ *
+ * @param {string} messageId
+ * @param {string} authorId
+ */
+function registerProxyMessage(messageId, authorId) {
+    proxyAuthors.set(messageId, authorId);
+}
+
 /**
  * Records a reaction. Self-reactions are ignored at insert time.
  *
@@ -79,13 +96,17 @@ function parseLeaderCommand(content) {
  * a fresh row, so the table always reflects ground-truth current state and the
  * leaderboard count is always correct — no special-casing needed.
  *
+ * For bot messages sent via `!s`, the credited author is the command issuer
+ * (looked up from `proxyAuthors`), not the bot that authored the message.
+ *
  * @param {import('discord.js').MessageReaction} reaction
  * @param {import('discord.js').User} user
  */
 function recordReaction(reaction, user) {
     const { message } = reaction;
-    if (!message.author || user.id === message.author.id) return;
-    insertStmt.run(message.id, user.id, message.author.id, toEmojiKey(reaction.emoji), Date.now());
+    const creditedId = proxyAuthors.get(message.id) ?? message.author?.id;
+    if (!creditedId || user.id === creditedId) return;
+    insertStmt.run(message.id, user.id, creditedId, toEmojiKey(reaction.emoji), Date.now());
 }
 
 /**
@@ -119,4 +140,4 @@ function getLeaderboard(key, display, limit = 5) {
     ].join('\n');
 }
 
-module.exports = { toEmojiKey, parseLeaderCommand, recordReaction, removeReaction, getLeaderboard };
+module.exports = { toEmojiKey, parseLeaderCommand, registerProxyMessage, recordReaction, removeReaction, getLeaderboard };
