@@ -4,7 +4,9 @@ const db = getDatabase();
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Schema initialized at module load — same pattern as scoring.js.
+// Schema and prepared statements are initialized at module load. Because Jest
+// uses resetModules: true, each test gets a fresh module (and a fresh :memory:
+// database), so eager initialization is equivalent to lazy for test isolation.
 db.prepare(`
     CREATE TABLE IF NOT EXISTS reactions (
         message_id TEXT NOT NULL,
@@ -69,9 +71,13 @@ function parseLeaderCommand(content) {
 }
 
 /**
- * Records a reaction. Self-reactions (author reacting to their own message) are
- * ignored. If the same user re-adds a reaction they previously removed, the
- * re-add inserts a fresh row — the PRIMARY KEY ensures it still counts as one.
+ * Records a reaction. Self-reactions are ignored at insert time.
+ *
+ * The PRIMARY KEY `(message_id, reactor_id, emoji)` enforces at-most-one-row
+ * per triple: `INSERT OR IGNORE` silently discards duplicate add events, and
+ * `removeReaction` deletes the row on un-react. A re-add after a remove inserts
+ * a fresh row, so the table always reflects ground-truth current state and the
+ * leaderboard count is always correct — no special-casing needed.
  *
  * @param {import('discord.js').MessageReaction} reaction
  * @param {import('discord.js').User} user
@@ -103,12 +109,14 @@ function removeReaction(reaction, user) {
  */
 function getLeaderboard(key, display, limit = 5) {
     const since = Date.now() - THIRTY_DAYS_MS;
-    const rows  = leaderboardStmt.all(key, since, limit);
+    const rows = leaderboardStmt.all(key, since, limit);
 
     if (rows.length === 0) return `Who is one ${display} message`;
 
-    return `${display} leaderboard (last 30 days):\n` +
-        rows.map((r, i) => `${i + 1}. <@${r.author_id}> (${r.total})`).join('\n');
+    return [
+        `${display} leaderboard (last 30 days):`,
+        ...rows.map((r, i) => `${i + 1}. <@${r.author_id}> (${r.total})`),
+    ].join('\n');
 }
 
 module.exports = { toEmojiKey, parseLeaderCommand, recordReaction, removeReaction, getLeaderboard };
