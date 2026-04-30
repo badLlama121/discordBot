@@ -35,14 +35,18 @@ String.prototype.unicodeToMerica = function () {
 };
 
 /// Lets remove the markdown
-String.prototype.deMarkDown = function () { 
-    const userExtractedString = extractUsers(this);
+String.prototype.deMarkDown = function () {
+    const emojiExtractedString = extractEmoji(this);
+    const userExtractedString = extractUsers(emojiExtractedString.cleansed);
     let replacePhrase = extractGtAndLt(userExtractedString.cleansed);
     replacePhrase = removeMd(replacePhrase)
         .replace('{LESS_THAN}', '<')
         .replace('{GREATER_THAN}', '>');
     userExtractedString.users?.forEach(user => {
         replacePhrase = replacePhrase.replace('|{|user|}|', user);
+    });
+    emojiExtractedString.emojis?.forEach(emoji => {
+        replacePhrase = replacePhrase.replace('|{|emoji|}|', emoji);
     });
     return replacePhrase;
 };
@@ -75,6 +79,13 @@ function extractUsers(inputString) {
     const users = inputString.match(userRegex);
     const cleansed = inputString.replace(userRegex, '|{|user|}|');
     return { cleansed, users };
+}
+
+function extractEmoji(inputString) {
+    const emojiRegex = /<a?:[a-zA-Z0-9_]+:[0-9]+>/gi;
+    const emojis = inputString.match(emojiRegex);
+    const cleansed = inputString.replace(emojiRegex, '|{|emoji|}|');
+    return { cleansed, emojis };
 }
 
 /**
@@ -169,6 +180,7 @@ function isBlockedSearchPhrase(phrase) {
 
 module.exports = {
     extractUrls,
+    extractEmoji,
     replaceFirstMessage,
     splitReplaceCommand
 };
