@@ -1,30 +1,28 @@
 const config = require('./config').getConfig();
 const removeMd = require('remove-markdown');
 
-// Unicode private-use characters as placeholders — these cannot appear in Discord messages,
-// so they are immune to accidental search term collisions.
+// Unicode private-use characters as placeholders — guaranteed absent from Discord messages,
+// so they can never accidentally match a user's search term.
 const URL_PLACEHOLDER = '\uE001';
 const ENTITY_PLACEHOLDER = '\uE002';
 
-function replaceAll(str, find, newToken = '', ignoreCase = false) {
+/**
+ * Replaces all occurrences of `find` in `str` with `newToken`.
+ * When `ignoreCase` is true, `find` is treated as a literal string with case-insensitive matching.
+ */
+function replaceOccurrences(str, find, newToken = '', ignoreCase = false) {
     if (find === null || find === undefined || find === '') return str;
 
     if (ignoreCase) {
-        // Escape special regex characters in 'find'
         const escapedFind = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedFind, 'gi');
-        return str.replace(regex, newToken);
-    } else {
-        return str.replaceAll(find, newToken);
+        return str.replace(new RegExp(escapedFind, 'gi'), newToken);
     }
+    return str.replaceOccurrences(find, newToken);
 }
 
 /**
- * Function that takes a string and then returns a "dumbed down" version
- * of it. Without smart quotes, etc.
- * @todo we need to strip accents, umlats, etc.
- * @param {string} strInput the input.
- * @returns a cleaned version of the string.
+ * Normalizes Unicode punctuation to its ASCII equivalent so that searches
+ * work regardless of whether the user typed curly quotes, em-dashes, etc.
  */
 const cleanseString = (strInput) => strInput
     .replace(/[\u201C\u201D]/g, '"')
@@ -33,134 +31,140 @@ const cleanseString = (strInput) => strInput
     .replace(/\u2013/g, '-')
     .replace(/\u2014/g, '--');
 
-/// because javascript gonna be javascript about this we can't use a lambda ere
+// Arrow functions don't bind 'this', so String prototype extensions must use function syntax.
 String.prototype.unicodeToMerica = function () {
     return cleanseString(this);
 };
 
-/// Lets remove the markdown
 String.prototype.deMarkDown = function () {
+    // Extract Discord entities first so extractGtAndLt doesn't mangle their <> brackets.
     const extracted = extractDiscordEntities(this);
-    // Expand markdown links [text](url) → "text url" before URL extraction so the
-    // URL survives removeMd (which would otherwise strip it entirely).
+
+    // Expand markdown links [text](url) → "text url" before extracting URLs, so that
+    // the URL is visible to extractUrls and not silently dropped by removeMd.
     const withLinksExpanded = extracted.cleansed.replace(/\[([^\]]*)\]\(([^)]*)\)/g, '$1 $2');
     const urlsExtracted = extractUrls(withLinksExpanded);
-    let replacePhrase = extractGtAndLt(urlsExtracted.cleansed);
-    replacePhrase = removeMd(replacePhrase)
+
+    // Protect any remaining <angle brackets> through the removeMd step.
+    let result = extractGtAndLt(urlsExtracted.cleansed);
+    result = removeMd(result)
         .replace(/\{LESS_THAN\}/g, '<')
         .replace(/\{GREATER_THAN\}/g, '>');
-    urlsExtracted.urls?.forEach(url => {
-        replacePhrase = replacePhrase.replace(URL_PLACEHOLDER, url);
-    });
-    extracted.entities?.forEach(entity => {
-        replacePhrase = replacePhrase.replace(ENTITY_PLACEHOLDER, entity);
-    });
-    return replacePhrase;
+
+    urlsExtracted.urls?.forEach(url => { result = result.replace(URL_PLACEHOLDER, url); });
+    extracted.entities?.forEach(entity => { result = result.replace(ENTITY_PLACEHOLDER, entity); });
+
+    return result;
 };
 
 /**
- * Takes a string as input and outputs an object with two properties: `cleansed` and `urls`.
- * The `cleansed` property contains the original string but with all URLs replaced with URL_PLACEHOLDER.
- * The `urls` property is an array of all removed URLs.
+ * Extracts all URLs from `inputString`, replacing each with `URL_PLACEHOLDER`.
+ * Requires a proper alphabetic TLD (2+ letters) to avoid false-positives on
+ * version strings (v1.2.3), prices (5.00), and other dot-separated numbers.
  *
- * @param {string} inputString - The input string to cleanse.
- * @returns {{cleansed: string, urls: string[]}}
+ * @param {string} inputString
+ * @returns {{ cleansed: string, urls: string[] | null }}
  */
 function extractUrls(inputString) {
-    // Require a proper alphabetic TLD (2+ letters) to avoid false positives on
-    // version numbers (1.2.3), prices (5.00), and other dot-separated numeric strings.
     const urlRegex = /((https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?)/gi;
-    const urls = inputString.match(urlRegex);
-    const cleansed = inputString.replace(urlRegex, URL_PLACEHOLDER);
-    return { cleansed, urls };
+    return {
+        cleansed: inputString.replace(urlRegex, URL_PLACEHOLDER),
+        urls: inputString.match(urlRegex)
+    };
 }
 
 /**
- * Extracts all Discord-encoded entities (mentions, emoji, channels, timestamps) from a string,
- * replacing each with ENTITY_PLACEHOLDER so downstream processing can't corrupt their contents.
- *
- * Covers: user mentions <@id> <@!id>, role mentions <@&id>, channel mentions <#id>,
- * custom emoji <:name:id> <a:name:id>, and timestamps <t:unix:format>.
+ * Extracts all Discord-encoded entities from `inputString`, replacing each with
+ * `ENTITY_PLACEHOLDER`. Covers:
+ *   - Custom emoji:       <:name:id>  <a:name:id>
+ *   - User mentions:      <@id>  <@!id>
+ *   - Role mentions:      <@&id>
+ *   - Channel mentions:   <#id>
+ *   - Timestamps:         <t:unix>  <t:unix:format>
  *
  * @param {string} inputString
- * @returns {{cleansed: string, entities: string[]}}
+ * @returns {{ cleansed: string, entities: string[] | null }}
  */
 function extractDiscordEntities(inputString) {
     const entityRegex = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
-    const entities = inputString.match(entityRegex);
-    const cleansed = inputString.replace(entityRegex, ENTITY_PLACEHOLDER);
-    return { cleansed, entities };
+    return {
+        cleansed: inputString.replace(entityRegex, ENTITY_PLACEHOLDER),
+        entities: inputString.match(entityRegex)
+    };
 }
 
 /**
- * Takes a string as input and replaces all balanced < and > symols with {LESS_THAN} and {GREATER_THAN}.
+ * Replaces `<...>` patterns with `{LESS_THAN}..{GREATER_THAN}` tokens so that
+ * `removeMd` doesn't interpret them as HTML. Restored after `removeMd` runs.
  *
- * @param {string} inputString - The input string to cleanse.
- * @returns {string} - The cleansed string.
+ * @param {string} inputString
+ * @returns {string}
  */
 function extractGtAndLt(inputString) {
-    const userRegex = /<(.*)>/gi;
-    const cleansed = inputString.replace(userRegex, '{LESS_THAN}$1{GREATER_THAN}');
-    return cleansed;
+    return inputString.replace(/<(.*)>/gi, '{LESS_THAN}$1{GREATER_THAN}');
 }
 
 /**
- * Does a replace on the first message that matches regex
+ * Searches `messages` for the first non-bot, non-command message that contains
+ * `regex`, then sends a copy of it to `channel` with the match bolded as
+ * `replacement`. Returns `true` if no match was found, `false` otherwise.
  *
- * @param {{content: string}[]} messages the messages to search through
- * @param {string|regex} regex the search string or regex
- * @param {string} replacement the replacement
- * @param {send: function} channel the channel send message
+ * The message is sanitised through the full pipeline before searching:
+ * Discord entities and URLs are extracted as opaque placeholders so that
+ * their internal content can never match the user's search term.
  *
- * @returns {boolean}
+ * @param {Iterable<{content: string, author: any}>} messages
+ * @param {string} regex - The search term (treated as a literal string).
+ * @param {string} replacement - The replacement text. Falsy to delete the match.
+ * @param {{ send: function }} channel
+ * @returns {boolean} `true` if no match was found.
  */
 function replaceFirstMessage(messages, regex, replacement, channel) {
-    if(! regex.toLocaleLowerCase) {
-        return true;
-    }
+    if (!regex.toLocaleLowerCase) return true;
 
     const lowerCaseSearch = regex.toLocaleLowerCase();
 
     return messages.every(msg => {
-        if(msg.author.bot || msg.content.toString().indexOf('!s') === 0) {
-            console.debug('Ignoring message from bot or search message');
+        if (msg.author.bot || msg.content.toString().indexOf('!s') === 0) {
+            console.debug('Ignoring message from bot or search command');
             return true;
         }
+
         const { cleansed: afterEntities, entities } = extractDiscordEntities(msg.content.unicodeToMerica().deMarkDown());
         const { cleansed, urls } = extractUrls(afterEntities);
-        if(cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
-            console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
-            let replacePhrase = '';
-            if (typeof replacement === 'string' && replacement.length > 0) {
-                // Use replacement if it's a non-empty string
-                replacePhrase = replaceAll(cleansed, regex, '\v' + replacement + '\v', true)
-                    .replace('\v\v', '')
-                    .replace(/\v/g, '**');
-            } else {
-                // For empty string, null, undefined, false, 0, remove the matched phrase
-                replacePhrase = replaceAll(cleansed, regex, '', true);
-            }
-            entities?.forEach(entity => {
-                replacePhrase = replacePhrase.replace(ENTITY_PLACEHOLDER, entity);
-            });
-            urls?.forEach(url => {
-                replacePhrase = replacePhrase.replace(URL_PLACEHOLDER, url);
-            });
-            channel.send(msg.author.toString() + ' ' + replacePhrase);
-            return false;
-        } else {
-            console.debug(`Message '${msg.content}' did not match search string '${regex}'`);
+
+        if (!cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
+            console.debug(`No match: '${msg.content}' does not contain '${regex}'`);
             return true;
         }
-    });
 
+        console.log(`Match found in "${msg.content}" for "${regex}"`);
+
+        let result;
+        if (typeof replacement === 'string' && replacement.length > 0) {
+            // Wrap the replacement with \v as a temporary bold marker. When the search
+            // term appears consecutively, adjacent markers collapse (\v\v → '') to produce
+            // a single **bold run** instead of the jarring ****empty**** gap.
+            result = replaceOccurrences(cleansed, regex, '\v' + replacement + '\v', true)
+                .replace('\v\v', '')
+                .replace(/\v/g, '**');
+        } else {
+            result = replaceOccurrences(cleansed, regex, '', true);
+        }
+
+        entities?.forEach(entity => { result = result.replace(ENTITY_PLACEHOLDER, entity); });
+        urls?.forEach(url => { result = result.replace(URL_PLACEHOLDER, url); });
+
+        channel.send(msg.author.toString() + ' ' + result);
+        return false;
+    });
 }
 
 /**
- * Takes the replace message and turn it into a searh regex and a replace message
+ * Parses a raw `!s search/replacement` command string into its components.
  *
- * @param {string} replaceCommand
- * @returns {{search:RegExp, isBlockedPhrase:boolean, replacement:string}}
+ * @param {string} replaceCommand - The full command text including `!s `.
+ * @returns {{ search: string, replacement: string | undefined, isBlockedPhrase: boolean }}
  */
 function splitReplaceCommand(replaceCommand) {
     const withoutCommand = replaceCommand.replace(/!s /, '');
@@ -170,20 +174,22 @@ function splitReplaceCommand(replaceCommand) {
 
     return {
         search,
-        isBlockedPhrase: isBlockedSearchPhrase(search) || (replacement !== undefined && isBlockedSearchPhrase(replacement)),
-        replacement
+        replacement,
+        isBlockedPhrase: isBlockedSearchPhrase(search) || (replacement !== undefined && isBlockedSearchPhrase(replacement))
     };
 }
 
 /**
- * Indicates if a phrase is blocekd from search and replace.
- * @param {string} phrase The phrase to check to see if its blocked.
- * @returns true if the phrase is blocked. False otherwise.
+ * Returns `true` if `phrase` matches any entry in `config.SearchPhrasesToBlock`.
+ * Matching is Unicode-normalized and accent-insensitive.
+ *
+ * @param {string} phrase
+ * @returns {boolean}
  */
 function isBlockedSearchPhrase(phrase) {
-    return config
-        .SearchPhrasesToBlock
-        .findIndex(blockedPhrase => phrase.match(new RegExp(blockedPhrase.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), 'iu'))) > -1;
+    return config.SearchPhrasesToBlock.some(
+        blocked => phrase.match(new RegExp(blocked.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), 'iu'))
+    );
 }
 
 module.exports = {

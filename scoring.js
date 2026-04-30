@@ -1,87 +1,70 @@
 const { getDatabase } = require('./db');
 
 const db = getDatabase();
-let schemaCreated = false;
+let insertStmt;
 
-/**
- * Runs the schema creation commands;
- * 
- * @param {Database} db the datbase. 
- */
-function createSchema(db) {
-    if (schemaCreated === true) {
-        return;
-    } 
+function ensureSchema() {
+    if (insertStmt) return;
     db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
-    db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase  COLLATE NOCASE);').run();
-    schemaCreated = true;
+    db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE);').run();
+    insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
 }
 
 /**
- * Get the score for a phrase.
- * 
- * @param {string} phrase the phrase.
- * @param {function(int)} callback A function that has the total as a parameter.
- * 
- * @returns {Number} the total score for the phrase. 
+ * Returns the total lifetime score for a phrase.
+ *
+ * @param {string} phrase
+ * @returns {number}
  */
-function getScore(phrase, callback) {
-    createSchema(db);
-    const selectStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;');
-    const row = selectStmt.get(phrase);
-    if (callback != null) {
-        callback(row.total);
-    }
+function getScore(phrase) {
+    ensureSchema();
+    const row = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;').get(phrase);
     return row.total;
 }
 
 /**
- * Processes scoring in messages
- * 
- * @param {{ content: string; author: any }} message
- * @return {Promise<void>} 
+ * Scans a message for scoring syntax and records any matches.
+ *
+ * Supported formats (per line):
+ *   phrase++          → +1
+ *   phrase-- / – / —  → -1
+ *   ✨phrase✨         → +1
+ *
+ * @param {{ content: string, author?: any }} message
  */
 function processScores(message) {
-    const lines = message.content.split(/[\r\n]+/);
-    lines.map(line =>  {
+    ensureSchema();
+
+    message.content.split(/[\r\n]+/).forEach(line => {
         let score = 0;
-        let phrase = undefined;
-        if (line.endsWith('++'))
-        {
+        let phrase;
+
+        if (line.endsWith('++')) {
             score = 1;
             phrase = line.replace(/\s*[+]+$/, '');
-        }
-        else if (/^(✨ ?)+[^✨]+(✨ ?)+$/.test(line)) 
-        {
+        } else if (/^(✨ ?)+[^✨]+(✨ ?)+$/.test(line)) {
             score = 1;
             phrase = line.match(/^(✨ ?)+([^✨]+)(✨ ?)+$/)[2];
-        }
-        else if (['--', '–', '—', ].findIndex(str => line.endsWith(str)) > -1)
-        {
+        } else if (['--', '–', '—'].some(suffix => line.endsWith(suffix))) {
             score = -1;
             phrase = line.replace(/\s*[-–—]+$/, '');
-        }
-        else 
-        {
+        } else {
             return;
         }
 
-        createSchema(db);
-
-        const insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
         insertStmt.run(Date.now(), message.content, message.author?.toString(), phrase, score);
     });
-    
 }
 
 /**
- * Gets the top and bottom phrases by score delta over the last 7 days.
+ * Returns a formatted string showing the top and bottom phrases by score delta
+ * over the last 7 days, suitable for sending directly to a Discord channel.
  *
- * @param {number} limit Number of phrases to return for each end.
- * @returns {string} Formatted message ready to send to Discord.
+ * @param {number} limit - Number of phrases to show at each end.
+ * @returns {string}
  */
 function getTrending(limit = 5) {
-    createSchema(db);
+    ensureSchema();
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const rows = db.prepare(`
         SELECT phrase, SUM(score) as total
@@ -97,10 +80,12 @@ function getTrending(limit = 5) {
 
     const fmt = (rows, label) => {
         if (rows.length === 0) return `*${label}: none*`;
-        return `**${label}**\n` + rows.map((r, i) => `${i + 1}. ${r.phrase} (${r.total > 0 ? '+' : ''}${r.total})`).join('\n');
+        return `**${label}**\n` + rows.map((r, i) =>
+            `${i + 1}. ${r.phrase} (${r.total > 0 ? '+' : ''}${r.total})`
+        ).join('\n');
     };
 
-    return `Trending last 7 days:\n${fmt(top, 'Top 5')}\n\n${fmt(bottom, 'Bottom 5')}`;
+    return `Trending last 7 days:\n${fmt(top, `Top ${limit}`)}\n\n${fmt(bottom, `Bottom ${limit}`)}`;
 }
 
 module.exports = {
