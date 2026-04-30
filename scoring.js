@@ -78,6 +78,7 @@ function getTrending(limit = 5) {
     const rows = trendingStmt.all(since);
 
     const top    = rows.slice(0, limit);
+    // Reference equality is intentional — top and slice(-limit) share objects from rows.
     const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();
 
     const fmt = (rows, label) => {

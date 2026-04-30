@@ -33,55 +33,76 @@ Scoring is case-insensitive. Phrase lookup via `!score` is also case-insensitive
 | `index.js` | Discord client setup and command routing |
 | `config.js` | Reads env vars; returns a typed, documented config object |
 | `db.js` | Opens the SQLite database singleton |
-| `scoring.js` | `processScores`, `getScore`, `getTrending` — all DB interaction |
+| `scoring.js` | `processScores`, `getScore`, `getTrending` — all DB interaction; `parseScoreLine` is an internal pure helper |
 | `replacer.js` | The full `!s` processing pipeline (see below) |
 | `one-blocked-message.js` | Random Easter egg that fires on `!s` and `!score` |
 
 ## The `replacer.js` Pipeline
 
-The `!s` pipeline is the most complex part of the codebase. Several bugs were
-fixed here — read this section before modifying it.
+The `!s` pipeline is the most complex part of the codebase. Read this section
+before modifying it.
 
 When processing a candidate message for replacement, the following stages run
 in order:
 
-1. **`unicodeToMerica`** — normalize curly quotes, em-dashes, etc. to their
-   ASCII equivalents so searches work regardless of input method.
+1. **`normalizeUnicode`** — normalize curly quotes, em-dashes, etc. to their
+   ASCII equivalents so searches work regardless of the sender's input method.
 
-2. **`deMarkDown`** (internal pipeline):
-   - Extract Discord entities (`<@id>`, `<:emoji:id>`, `<#id>`, `<t:unix:f>`,
-     role mentions `<@&id>`) → opaque placeholder (`\uE002`)
-   - Expand markdown links `[text](url)` → `text url` so the URL survives the
-     next step
-   - Extract URLs → opaque placeholder (`\uE001`)
-   - Shield remaining `<angle brackets>` through `removeMd` via
-     `{LESS_THAN}` / `{GREATER_THAN}` tokens (restored with `/g` after)
+2. **`stripMarkdown`** (internal pipeline):
+   - `extractDiscordEntities` → replace each entity with `ENTITY_PLACEHOLDER` (`\uE002`)
+   - Expand markdown links `[text](url)` → `text url` so the URL survives
+     the next step
+   - `extractUrls` → replace each URL with `URL_PLACEHOLDER` (`\uE001`)
+   - `escapeAngleBrackets` → shield remaining `<...>` from `removeMd` using
+     the string tokens `{LESS_THAN}` / `{GREATER_THAN}`
    - Run `removeMd` to strip bold, italic, etc.
-   - Re-insert URLs, then entities
+   - Restore brackets, then URLs, then entities
 
 3. **`extractDiscordEntities`** (second pass, in `replaceFirstMessage`) —
-   entities are re-extracted after `deMarkDown` re-inserts them, so they are
-   still opaque placeholders during the string replacement step.
+   entities are re-extracted after `stripMarkdown` re-inserts them, so they
+   remain opaque placeholders during the string replacement step.
 
 4. **`extractUrls`** (second pass) — same reason as above.
 
-5. **String replacement** — runs on text where entities and URLs are inert
-   placeholders and cannot be corrupted.
+5. **`replaceOccurrences`** — runs on text where entities and URLs are inert
+   placeholders and cannot be corrupted. Always case-insensitive; the search
+   term is regex-escaped before matching so metacharacters are treated as
+   literals.
 
 6. **Re-insert** entities then URLs into the final string.
 
 ### Why two extraction passes?
 
-The first pass (inside `deMarkDown`) protects entities and URLs from
+The first pass (inside `stripMarkdown`) protects entities and URLs from
 `removeMd`. The second pass (in `replaceFirstMessage`) protects them from the
 user's search-and-replace. Both are necessary.
+
+### Module-scope constants
+
+`ENTITY_RE` and `URL_RE` are compiled once at module load and reused on every
+message — do not inline them back into functions.
+
+`BLOCKED_PHRASE_RES` is built from `config.SearchPhrasesToBlock` at module
+load. Changing that env var requires a bot restart to take effect.
 
 ### Placeholders
 
 `URL_PLACEHOLDER` (`\uE001`) and `ENTITY_PLACEHOLDER` (`\uE002`) are Unicode
 private-use-area characters. They cannot appear in Discord messages, so they
 are immune to accidental search-term collisions (e.g. `!s url/link` cannot
-corrupt the placeholder).
+match the placeholder).
+
+`{LESS_THAN}` / `{GREATER_THAN}` are plain string tokens used only within
+`stripMarkdown` to survive `removeMd`. They are not PUA characters and are not
+exported; they never appear outside that function.
+
+## `scoring.js` Initialization
+
+Schema creation and statement preparation run eagerly at module load (not
+lazily on first call). This keeps the public functions free of defensive
+prefixes. With Jest's `resetModules: true`, each test gets a fresh module
+instance pointed at a fresh `:memory:` database, so test isolation is
+unchanged.
 
 ## Environment Variables
 
@@ -95,7 +116,7 @@ corrupt the placeholder).
 | `ONE_BLOCKED_PERCENT` | `1` | Easter egg trigger chance (%) for regular users |
 | `REALEST_ONE_BLOCKED_PERCENT` | `5` | Easter egg trigger chance (%) for `THE_REALEST_MFERS` |
 | `THE_REALEST_MFERS` | `kerouac5` | Semicolon-separated VIP usernames |
-| `SEARCH_PHRASES_TO_BLOCK` | — | Comma-separated phrases blocked from `!s` |
+| `SEARCH_PHRASES_TO_BLOCK` | — | Comma-separated phrases blocked from `!s` (regex-capable; restart required to apply changes) |
 
 ## Testing
 
@@ -104,17 +125,19 @@ npm test
 ```
 
 Jest is configured in `jest.config.json`. Notable settings:
-- `resetModules: true` — module registry is reset before **each individual test**,
-  so modules that read config at load time (like `scoring.js` and
+
+- `resetModules: true` — module registry is reset before **each individual
+  test**, so modules that do work at load time (`scoring.js`, `replacer.js`,
   `one-blocked-message.js`) get a fresh instance per test.
 - `clearMocks` / `resetMocks: true` — mock state is cleared automatically;
   no need for `jest.clearAllMocks()` in `afterEach` unless you are also
   restoring spies.
 
 Because `resetModules` is global, tests that need a fresh module instance
-should `require` it inside the test body (see `scoring.test.js`).
-Tests that need a consistent import across all tests in a file (such as
-`replacer.test.js`) can import at the top level.
+(e.g. to pick up a different `SCORE_DATABASE`) should `require` it inside the
+test body — see `scoring.test.js`. Tests that need a consistent import across
+all cases in a file can require at the top level — see `replacer.test.js`,
+which sets up its config mock before the top-level `require`.
 
 ## Local Development
 
@@ -126,3 +149,4 @@ Tests that need a consistent import across all tests in a file (such as
    ALLOW_CONFIG_DUMP=true
    ```
 4. `npm start` — starts the bot via nodemon with auto-restart on file changes
+5. `npm test` — run the full test suite
