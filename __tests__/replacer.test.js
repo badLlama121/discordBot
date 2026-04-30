@@ -3,7 +3,7 @@ const config = require('../config');
 config.getConfig.mockReturnValue({
     SearchPhrasesToBlock: ['boogers', 'dong']
 });
-const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractEmoji } = require('../replacer');
+const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractDiscordEntities } = require('../replacer');
 
  
 describe('Tests the replacer module', () => {
@@ -154,7 +154,6 @@ describe('Tests the replacer module', () => {
     });
 
     it('does not replace inside custom emoji IDs', () => {
-        // Regression: !s 6/bo was replacing '6' inside emoji numeric IDs like <a:aniblobsweat:488851906022825677>
         const emojiMessages = [{
             content: '<a:aniblobsweat:488851906022825677> <a:aniblobsweat:488851906022825677>',
             author: { bot: false, toString: () => 'author' }
@@ -164,11 +163,29 @@ describe('Tests the replacer module', () => {
         expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining('bo22825bo'));
     });
 
-    it('extracts custom emoji correctly', () => {
-        const input = '<a:aniblobsweat:48885190602282567> hello <:smile:123456789>';
-        const result = extractEmoji(input);
-        expect(result.cleansed).toBe('|{|emoji|}| hello |{|emoji|}|');
-        expect(result.emojis).toEqual(['<a:aniblobsweat:48885190602282567>', '<:smile:123456789>']);
+    it.each([
+        ['animated emoji',  '<a:aniblobsweat:488851906022825677>'],
+        ['static emoji',    '<:smile:123456789>'],
+        ['user mention',    '<@416708751500902411>'],
+        ['nickname mention','<@!416708751500902411>'],
+        ['role mention',    '<@&987654321098765432>'],
+        ['channel mention', '<#123456789012345678>'],
+        ['timestamp',       '<t:1745884800:R>'],
+    ])('extractDiscordEntities extracts %s', (_, entity) => {
+        const input = `hello ${entity} world`;
+        const result = extractDiscordEntities(input);
+        expect(result.cleansed).toBe('hello |{|entity|}| world');
+        expect(result.entities).toEqual([entity]);
+    });
+
+    it('does not replace inside role or channel mention IDs', () => {
+        const mentionMessages = [{
+            content: 'check <@&988765432100123456> and <#123456789012345678>',
+            author: { bot: false, toString: () => 'author' }
+        }];
+        const sut = splitReplaceCommand('!s 5/x');
+        replaceFirstMessage(mentionMessages, sut.search, sut.replacement, channel);
+        expect(channel.send).not.toHaveBeenCalledWith(expect.stringMatching(/<@&|<#/));
     });
 
     it('handles search strings that are regexes', () => {
