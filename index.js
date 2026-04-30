@@ -18,39 +18,38 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag} — ready.`);
 });
 
-client.on('messageCreate', async (initialQuery) => {
-    if (initialQuery.author.bot) return;
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-    if (config.AllowConfigDump === true && initialQuery.content.startsWith('!configDump')) {
-        initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}\n\`\`\``);
+    if (config.AllowConfigDump === true && message.content.startsWith('!configDump')) {
+        message.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}\n\`\`\``);
     }
-    else if (initialQuery.content.startsWith('!s ')) {
-        console.log('Quoting user ' + initialQuery.author.username);
+    else if (message.content.startsWith('!s ')) {
+        console.log(`Quoting user ${message.author.username}`);
 
-        if (oneBlockedMessage(initialQuery)) return;
+        if (oneBlockedMessage(message)) return;
 
-        const channel = initialQuery.channel;
-        const messages = await channel.messages.fetch({ limit: config.MessageFetchCount });
-        const splitMessage = splitReplaceCommand(initialQuery.content);
-        if (!splitMessage.isBlockedPhrase) {
-            const failedToFind = replaceFirstMessage(messages, splitMessage.search, splitMessage.replacement, channel);
+        const channel = message.channel;
+        const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
+        const cmd = splitReplaceCommand(message.content);
+        if (!cmd.isBlockedPhrase) {
+            const failedToFind = replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
             if (failedToFind) {
-                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
+                message.channel.send(`${message.author} nobody said that, dumb ass`);
             }
         }
     }
-    else if (initialQuery.content.startsWith('!trending')) {
-        initialQuery.channel.send(getTrending(5));
+    else if (message.content.startsWith('!trending')) {
+        message.channel.send(getTrending(5));
     }
-    else if (initialQuery.content.startsWith('!score ')) {
-        if (oneBlockedMessage(initialQuery)) return;
+    else if (message.content.startsWith('!score ')) {
+        if (oneBlockedMessage(message)) return;
 
-        const phrase = initialQuery.content.replace(/^!score/, '').trim();
-        const score = getScore(phrase);
-        initialQuery.channel.send(`Score *${phrase}*: ${score}`);
+        const phrase = message.content.replace(/^!score/, '').trim();
+        message.channel.send(`Score *${phrase}*: ${getScore(phrase)}`);
     }
     else {
-        processScores(initialQuery);
+        processScores(message);
     }
 });
 
