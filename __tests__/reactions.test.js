@@ -57,8 +57,25 @@ describe('reactions', () => {
     });
 
     // ---------------------------------------------------------------------------
-    // recordReaction / removeReaction
+    // registerProxyMessage / recordReaction / removeReaction
     // ---------------------------------------------------------------------------
+
+    describe('registerProxyMessage', () => {
+        it('credits the proxy author (the !s issuer) when someone reacts to a bot reply', () => {
+            const { registerProxyMessage, recordReaction, getLeaderboard } = require('../reactions');
+            registerProxyMessage('bot-msg-1', 'cmd-issuer');
+            // reactor reacts to the bot's message; credit should go to cmd-issuer, not the bot
+            recordReaction({ message: { id: 'bot-msg-1', author: { id: 'bot' } }, emoji: thumbsUp }, { id: 'reactor1' });
+            expect(getLeaderboard('👍', '👍')).toContain('<@cmd-issuer> (1)');
+        });
+
+        it('does not credit the !s issuer for their own reaction to the bot reply', () => {
+            const { registerProxyMessage, recordReaction, getLeaderboard } = require('../reactions');
+            registerProxyMessage('bot-msg-1', 'cmd-issuer');
+            recordReaction({ message: { id: 'bot-msg-1', author: { id: 'bot' } }, emoji: thumbsUp }, { id: 'cmd-issuer' });
+            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+        });
+    });
 
     describe('recordReaction', () => {
         it('records a reaction and reflects it in the leaderboard', () => {

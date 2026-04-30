@@ -112,149 +112,153 @@ describe('extractDiscordEntities', () => {
 // ---------------------------------------------------------------------------
 
 describe('replaceFirstMessage', () => {
-    it('returns true immediately when searchTerm is not a string', () => {
-        expect(replaceFirstMessage(messages, /regex/, 'x', channel)).toBe(true);
+    beforeEach(() => {
+        channel.send.mockResolvedValue({ id: 'mock-msg-id' });
+    });
+
+    it('returns null immediately when searchTerm is not a string', async () => {
+        expect(await replaceFirstMessage(messages, /regex/, 'x', channel)).toBeNull();
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('returns true when no message contains the search term', () => {
-        expect(replaceFirstMessage(messages, 'It was the best of times', 'x', channel)).toBe(true);
+    it('returns null when no message contains the search term', async () => {
+        expect(await replaceFirstMessage(messages, 'It was the best of times', 'x', channel)).toBeNull();
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('matches the first eligible message and skips later ones', () => {
+    it('matches the first eligible message and skips later ones', async () => {
         const term = 'hog wild';
-        expect(replaceFirstMessage(messages, term, 'the budget', channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, term, 'the budget', channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author No I used this for my demo so I could justify going **the budget**');
     });
 
-    it('skips bot messages and !s commands when searching', () => {
+    it('skips bot messages and !s commands when searching', async () => {
         const botMsg = { content: 'hog wild', author: { bot: true, toString: () => 'bot' } };
         const cmdMsg = { content: '!s hog wild/x', author };
-        expect(replaceFirstMessage([botMsg, cmdMsg], 'hog wild', 'x', channel)).toBe(true);
+        expect(await replaceFirstMessage([botMsg, cmdMsg], 'hog wild', 'x', channel)).toBeNull();
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it.each(['', null, undefined, false, 0])('deletes the matched phrase when replacement is falsy (%s)', replacement => {
-        expect(replaceFirstMessage(messages, 'hog wild', replacement, channel)).toBe(false);
+    it.each(['', null, undefined, false, 0])('deletes the matched phrase when replacement is falsy (%s)', async replacement => {
+        expect(await replaceFirstMessage(messages, 'hog wild', replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author No I used this for my demo so I could justify going ');
     });
 
-    it('normalizes curly quotes before matching', () => {
+    it('normalizes curly quotes before matching', async () => {
         const { search, replacement } = splitReplaceCommand('!s \u201Cfind and replace\u201D/hurkle durkle');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author I don\'t like **hurkle durkle**');
     });
 
-    it('normalizes curly quotes in the message before matching', () => {
+    it('normalizes curly quotes in the message before matching', async () => {
         const { search, replacement } = splitReplaceCommand('!s "find and replace dumb"/hurkle durkle');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author I don\'t like **hurkle durkle**');
     });
 
-    it('strips markdown formatting before matching and restores entities in output', () => {
-        expect(replaceFirstMessage(messages, 'an attic', 'hobbit hole', channel)).toBe(false);
+    it('strips markdown formatting before matching and restores entities in output', async () => {
+        expect(await replaceFirstMessage(messages, 'an attic', 'hobbit hole', channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author <@416708751500902411>  lives in **hobbit hole** not a condo');
     });
 
-    it('treats regex metacharacters in the search term as literals', () => {
+    it('treats regex metacharacters in the search term as literals', async () => {
         const { search, replacement } = splitReplaceCommand('!s ?/!');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith(
             'author lol is this why you went so hog wild getting the environment set up like a real project instead of brans script kiddy level hackery**!**'
         );
     });
 
-    it('preserves angle brackets around the replaced term', () => {
+    it('preserves angle brackets around the replaced term', async () => {
         const { search, replacement } = splitReplaceCommand('!s dumb person/CTO');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author I am a <**CTO**>');
     });
 
-    it('preserves multiple angle-bracket spans on the same line', () => {
+    it('preserves multiple angle-bracket spans on the same line', async () => {
         // Regression: greedy <(.*)> matched from the first < to the last >, mangling everything between.
         const msgs = [{ content: 'I am <foo> and also <bar>', author }];
         const { search, replacement } = splitReplaceCommand('!s foo/baz');
-        replaceFirstMessage(msgs, search, replacement, channel);
+        await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).toHaveBeenCalledWith('author I am <**baz**> and also <bar>');
     });
 
-    it('restores all angle brackets in a multi-line message', () => {
+    it('restores all angle brackets in a multi-line message', async () => {
         // Regression: bracket restoration was not global; only the first bracket in
         // a multi-bracket message was restored, leaving the rest as raw placeholders.
         const msgs = [{ content: '<foo>\n<bar>', author }];
         const { search, replacement } = splitReplaceCommand('!s foo/baz');
-        replaceFirstMessage(msgs, search, replacement, channel);
+        await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).toHaveBeenCalledWith(expect.stringContaining('<bar>'));
         expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining('{LESS_THAN}'));
         expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining('{GREATER_THAN}'));
     });
 
-    it('collapses adjacent bold markers when the term appears twice consecutively', () => {
+    it('collapses adjacent bold markers when the term appears twice consecutively', async () => {
         const msgs = [{ content: 'nice peppy buzz', author }];
         const { search, replacement } = splitReplaceCommand('!s z/t');
-        expect(replaceFirstMessage(msgs, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author nice peppy bu**tt**');
     });
 
-    it('collapses adjacent bold markers when the term appears 3+ times consecutively', () => {
+    it('collapses adjacent bold markers when the term appears 3+ times consecutively', async () => {
         // Regression: non-global \v\v replace left dangling ** markers on 3+ consecutive matches.
         const msgs = [{ content: 'hahahaha', author }];
         const { search, replacement } = splitReplaceCommand('!s ha/he');
-        expect(replaceFirstMessage(msgs, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author **hehehehe**');
     });
 
-    it('replaces matched text but leaves URL content untouched', () => {
+    it('replaces matched text but leaves URL content untouched', async () => {
         const { search, replacement } = splitReplaceCommand('!s oo/aa');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith(
             'author **aa** https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz **aa**'
         );
     });
 
-    it('skips messages where the search term appears only within a URL', () => {
+    it('skips messages where the search term appears only within a URL', async () => {
         // 'example' appears in both https://www.example.com (skipped) and plain text (matched).
         const { search, replacement } = splitReplaceCommand('!s example/ancedote');
-        expect(replaceFirstMessage(messages, search, replacement, channel)).toBe(false);
+        expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author This is not the only version, this is just an **ancedote**');
     });
 
-    it('preserves a URL from a markdown link after replacement', () => {
+    it('preserves a URL from a markdown link after replacement', async () => {
         // Regression: removeMd discarded the href from [text](url) links.
         const msgs = [{ content: '[click here](https://example.com) for more info', author }];
         const { search, replacement } = splitReplaceCommand('!s click here/go away');
-        replaceFirstMessage(msgs, search, replacement, channel);
+        await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).toHaveBeenCalledWith(expect.stringContaining('https://example.com'));
     });
 
-    it('does not replace inside custom emoji IDs', () => {
+    it('does not replace inside custom emoji IDs', async () => {
         // The search term only exists inside entity IDs; extraction must prevent any match.
         const msgs = [{ content: '<a:aniblobsweat:488851906022825677> <a:aniblobsweat:488851906022825677>', author }];
         const { search, replacement } = splitReplaceCommand('!s 6/bo');
-        replaceFirstMessage(msgs, search, replacement, channel);
+        await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('does not replace inside role or channel mention IDs', () => {
+    it('does not replace inside role or channel mention IDs', async () => {
         // The search term only exists inside entity IDs; extraction must prevent any match.
         const msgs = [{ content: 'check <@&988765432100123456> and <#123456789012345678>', author }];
         const { search, replacement } = splitReplaceCommand('!s 5/x');
-        replaceFirstMessage(msgs, search, replacement, channel);
+        await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('does not match placeholder text when searching for "url"', () => {
+    it('does not match placeholder text when searching for "url"', async () => {
         // Regression: PUA placeholder must be immune to searches containing its text.
         const msgs = [{ content: 'check https://example.com', author }];
-        replaceFirstMessage(msgs, 'url', 'link', channel);
+        await replaceFirstMessage(msgs, 'url', 'link', channel);
         expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining(URL_PLACEHOLDER));
         expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining('link'));
     });
 
-    it('does not match placeholder text when searching for "entity"', () => {
+    it('does not match placeholder text when searching for "entity"', async () => {
         const msgs = [{ content: '<a:aniblobsweat:123456789>', author }];
-        replaceFirstMessage(msgs, 'entity', 'thing', channel);
+        await replaceFirstMessage(msgs, 'entity', 'thing', channel);
         expect(channel.send).not.toHaveBeenCalled();
     });
 });

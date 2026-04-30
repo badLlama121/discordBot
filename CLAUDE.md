@@ -113,7 +113,14 @@ this table to produce a ranked list.
 - `DELETE` on remove: if the user re-adds later, a new row is inserted. The
   net count is always correct because the table reflects current state.
 
-**Self-reactions** are excluded at insert time (`user.id === message.author.id`).
+**Self-reactions** are excluded at insert time. For proxy messages (see below),
+the self-reaction check compares the reactor against the command issuer, not
+the bot.
+
+**Proxy messages** (`!s` replies): When the bot sends a `!s` reply on behalf of
+a user, `registerProxyMessage(messageId, authorId)` maps the bot message ID to
+the command issuer. `recordReaction` checks this map first; if found, reactions
+on that bot message credit the command issuer rather than the bot.
 
 **Emoji key format**: Unicode emoji are stored as the character (`👍`); custom
 emoji are stored as `name:id` (`kirby:123456789`). Animated and non-animated
