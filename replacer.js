@@ -9,7 +9,7 @@ const ENTITY_PLACEHOLDER = '\uE002';
 const LT_PLACEHOLDER     = '\uE003'; // used only within stripMarkdown
 const GT_PLACEHOLDER     = '\uE004'; // used only within stripMarkdown
 
-// Compiled once at module load — used on every processed message.
+// Compiled once at module load — reused on every processed message.
 const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
 const URL_RE    = /(https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?/gi;
 
@@ -23,6 +23,17 @@ const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
 // Text normalization
 // ---------------------------------------------------------------------------
 
+// Single-pass Unicode normalizer: one compiled regex, one lookup table.
+// Adding a new mapping means one new line in the Map — the function never changes.
+const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u2026\u2013\u2014]/g;
+const UNICODE_NORM_MAP = new Map([
+    ['\u201C', '"'], ['\u201D', '"'],
+    ['\u2018', "'"], ['\u2019', "'"],
+    ['\u2026', '...'],
+    ['\u2013', '-'],
+    ['\u2014', '--'],
+]);
+
 /**
  * Normalizes Unicode punctuation to ASCII equivalents so that searches work
  * regardless of whether the sender's device produced curly quotes, em-dashes, etc.
@@ -31,17 +42,13 @@ const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
  * @returns {string}
  */
 function normalizeUnicode(str) {
-    return String(str)
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/\u2026/g, '...')
-        .replace(/\u2013/g, '-')
-        .replace(/\u2014/g, '--');
+    return String(str).replace(UNICODE_NORM_RE, c => UNICODE_NORM_MAP.get(c));
 }
 
 // ---------------------------------------------------------------------------
 // Extraction helpers — each replaces a class of content with a placeholder
-// so that downstream processing treats it as an opaque token.
+// so that downstream processing treats it as an opaque token. `reinsert`
+// is the inverse: it folds extracted values back in, in appearance order.
 // ---------------------------------------------------------------------------
 
 /**
@@ -91,6 +98,20 @@ function escapeAngleBrackets(str) {
     return str.replace(/<([^>]*)>/g, `${LT_PLACEHOLDER}$1${GT_PLACEHOLDER}`);
 }
 
+/**
+ * Folds `values` back into `str` in order, replacing the first occurrence of
+ * `placeholder` with each successive value — the inverse of the extract-and-
+ * replace pattern used by `extractUrls` and `extractDiscordEntities`.
+ *
+ * @param {string} str
+ * @param {string} placeholder
+ * @param {string[] | null} values
+ * @returns {string}
+ */
+function reinsert(str, placeholder, values) {
+    return values ? values.reduce((s, v) => s.replace(placeholder, v), str) : str;
+}
+
 // ---------------------------------------------------------------------------
 // Markdown stripping
 // ---------------------------------------------------------------------------
@@ -104,7 +125,7 @@ function escapeAngleBrackets(str) {
  *   3. Extract URLs               → URL_PLACEHOLDER
  *   4. Escape remaining <brackets>
  *   5. removeMd
- *   6. Restore brackets, URLs, entities
+ *   6. Restore brackets, entities, URLs
  *
  * @param {string} str
  * @returns {string}
@@ -118,9 +139,8 @@ function stripMarkdown(str) {
         .split(LT_PLACEHOLDER).join('<')
         .split(GT_PLACEHOLDER).join('>');
 
-    urls?.forEach(url    => { result = result.replace(URL_PLACEHOLDER,    url);    });
-    entities?.forEach(e  => { result = result.replace(ENTITY_PLACEHOLDER, e);      });
-
+    result = reinsert(result, ENTITY_PLACEHOLDER, entities);
+    result = reinsert(result, URL_PLACEHOLDER, urls);
     return result;
 }
 
@@ -203,8 +223,8 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
         console.log(`Match found in "${msg.content}" for "${searchTerm}"`);
 
         let result = applyReplacement(cleansed, searchTerm, replacement);
-        entities?.forEach(e  => { result = result.replace(ENTITY_PLACEHOLDER, e);   });
-        urls?.forEach(url    => { result = result.replace(URL_PLACEHOLDER,    url);  });
+        result = reinsert(result, ENTITY_PLACEHOLDER, entities);
+        result = reinsert(result, URL_PLACEHOLDER, urls);
 
         channel.send(`${msg.author} ${result}`);
         return false;
