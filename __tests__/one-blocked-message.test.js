@@ -1,17 +1,18 @@
-
-const { oneBlockedMessage } = require('../one-blocked-message');
-
 jest.mock('../config', () => ({
-        getConfig: () => ({TheRealests: [ 'testRealest' ],
+    getConfig: () => ({
+        TheRealests: ['testRealest'],
         OneBlockedPercent: 1,
-        RealestOneBlockedPercent: 5
+        RealestOneBlockedPercent: 5,
+        DisableOneBlockedMessage: false
     })
 }));
 
-describe('Tests the one blocked message module', () => {    
-    beforeAll(() => {
-        // If we mock this, then it just won't do anything, which is what we want to do.
-        
+const { oneBlockedMessage } = require('../one-blocked-message');
+
+describe('oneBlockedMessage', () => {
+    const makeQuery = (username) => ({
+        author: { username, toString: () => `@${username}` },
+        channel: { send: jest.fn() }
     });
 
     beforeEach(() => {
@@ -19,36 +20,44 @@ describe('Tests the one blocked message module', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
         jest.restoreAllMocks();
     });
 
-    test('oneBlockedMessage sends a message to a realest user and returns true when random value is greater than trigger percentage for a realest user but less than for a regular user', () => {
-        const initialQuery = {
-            author: { 
-                toString: () => '@testRealest',
-                username: 'testRealest' 
-            },
-            channel: { send: jest.fn() }
-        };
-
-        const result = oneBlockedMessage(initialQuery);
-
-        expect(result).toBe(true);
-        expect(initialQuery.channel.send).toHaveBeenCalledWith('@testRealest who is one blocked message');
+    it('fires for a VIP (Realest) user when random value exceeds their higher threshold', () => {
+        // Math.random() = 0.96 → 96 > (100 - 5 = 95) → triggers for Realest
+        const query = makeQuery('testRealest');
+        expect(oneBlockedMessage(query)).toBe(true);
+        expect(query.channel.send).toHaveBeenCalledWith('@testRealest who is one blocked message');
     });
 
-    test('oneBlockedMessage does not send a message and returns false when random value is less than or equal to trigger percentage', () => {
-        // Change the mock return value for this test
-        
-        const initialQuery = {
-            author: { username: 'testUser' },
-            channel: { send: jest.fn() }
-        };
+    it('does not fire for a regular user at the same random value', () => {
+        // Math.random() = 0.96 → 96 < (100 - 1 = 99) → does not trigger for regular user
+        const query = makeQuery('regularUser');
+        expect(oneBlockedMessage(query)).toBe(false);
+        expect(query.channel.send).not.toHaveBeenCalled();
+    });
 
-        const result = oneBlockedMessage(initialQuery);
+    it('fires for a regular user when random value exceeds their lower threshold', () => {
+        jest.spyOn(global.Math, 'random').mockReturnValue(0.995);
+        // 99.5 > (100 - 1 = 99) → triggers for regular user too
+        const query = makeQuery('regularUser');
+        expect(oneBlockedMessage(query)).toBe(true);
+        expect(query.channel.send).toHaveBeenCalledWith('@regularUser who is one blocked message');
+    });
 
-        expect(result).toBe(false);
-        expect(initialQuery.channel.send).not.toHaveBeenCalled();
+    it('never fires when DisableOneBlockedMessage is true', () => {
+        jest.resetModules();
+        jest.mock('../config', () => ({
+            getConfig: () => ({
+                TheRealests: ['testRealest'],
+                OneBlockedPercent: 100,
+                RealestOneBlockedPercent: 100,
+                DisableOneBlockedMessage: true
+            })
+        }));
+        const { oneBlockedMessage: disabledFn } = require('../one-blocked-message');
+        const query = makeQuery('testRealest');
+        expect(disabledFn(query)).toBe(false);
+        expect(query.channel.send).not.toHaveBeenCalled();
     });
 });

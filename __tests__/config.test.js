@@ -1,71 +1,88 @@
-describe('Tests the config module', () => {
-    
+// dotenv is mocked so it doesn't try to read a real .env file during tests.
+jest.mock('dotenv');
+
+describe('config module', () => {
     const OLD_ENV = process.env;
 
-    // If we mock this, then it just won't do anything, which is what we want to do.
-    jest.mock('dotenv');
-
     afterEach(() => {
-      jest.clearAllMocks();
-      jest.resetModules();
-      process.env = { ...OLD_ENV };
+        jest.clearAllMocks();
+        jest.resetModules();
+        process.env = { ...OLD_ENV };
     });
 
-    it('sets the expected defaults', () => {
+    it('returns the expected defaults when no env vars are set', () => {
         const config = require('../config').getConfig();
-
-        expect(config).toEqual( {
-            'AllowConfigDump': false,
-            'DisableOneBlockedMessage': false,
-            'MessageFetchCount': 50,
-            'OneBlockedPercent': 1,
-            'ScoreDatabase': './score.db3',
-            'RealestOneBlockedPercent': 5,
-            'TheRealests': [
-              'kerouac5',
-            ],
-            'SearchPhrasesToBlock': [],
+        expect(config).toEqual({
+            AllowConfigDump: false,
+            DisableOneBlockedMessage: false,
+            MessageFetchCount: 50,
+            OneBlockedPercent: 1,
+            RealestOneBlockedPercent: 5,
+            ScoreDatabase: './score.db3',
+            SearchPhrasesToBlock: [],
+            TheRealests: ['kerouac5'],
+            Token: undefined
         });
     });
 
-    it.each([ 
-        ... ['Ù', 'Ú', 'Û', 'Ü', 'ù', 'ú', 'û' ].map(u => `tr${u}e`), 
-        ... ['È', 'É', 'Ê', 'Ë', 'è', 'é', 'ê', 'ë' ].map(e => `tru${e}`), 
-        'true', 'TRUE' ])('Sets AlloeConfigDump to true when ALLOW_CONFIG_DUMP is set to %s', element => {
-        process.env.ALLOW_CONFIG_DUMP = element;
+    it.each([
+        ...['Ù', 'Ú', 'Û', 'Ü', 'ù', 'ú', 'û'].map(u => `tr${u}e`),
+        ...['È', 'É', 'Ê', 'Ë', 'è', 'é', 'ê', 'ë'].map(e => `tru${e}`),
+        'true', 'TRUE'
+    ])('sets AllowConfigDump to true when ALLOW_CONFIG_DUMP is "%s"', value => {
+        process.env.ALLOW_CONFIG_DUMP = value;
         const config = require('../config').getConfig();
-        expect(config.AllowConfigDump).toEqual(true);
+        expect(config.AllowConfigDump).toBe(true);
     });
 
-    it.each([ { input: '0', expected: 0 }, { input: '0.5', expected: .5 }, { input: '.5', expected: .5 }, { input: '50.0', expected: 50 } ])('Ensure OneBlockedPercentage are RealestOneBlockedPercentage are set with %s.', element => {
-        process.env.REALEST_ONE_BLOCKED_PERCENT = element.input;
-        process.env.ONE_BLOCKED_PERCENT = element.input;
+    it.each(['false', '0', '1', 'truthiness', 'George Washington', '-1', null, undefined, ''])(
+        'AllowConfigDump is false when ALLOW_CONFIG_DUMP is "%s"', value => {
+            process.env.ALLOW_CONFIG_DUMP = value;
+            const config = require('../config').getConfig();
+            expect(config.AllowConfigDump).toBe(false);
+        }
+    );
+
+    it.each([
+        { input: '0',   expected: 0   },
+        { input: '0.5', expected: 0.5 },
+        { input: '.5',  expected: 0.5 },
+        { input: '50.0', expected: 50 }
+    ])('sets OneBlockedPercent and RealestOneBlockedPercent to $expected when env is "$input"', ({ input, expected }) => {
+        process.env.ONE_BLOCKED_PERCENT = input;
+        process.env.REALEST_ONE_BLOCKED_PERCENT = input;
         const config = require('../config').getConfig();
-        expect(config.OneBlockedPercent).toEqual(element.expected);
-        expect(config.RealestOneBlockedPercent).toEqual(element.expected);
+        expect(config.OneBlockedPercent).toBe(expected);
+        expect(config.RealestOneBlockedPercent).toBe(expected);
     });
 
-    it.each([ 'false', '0', '1', 'truthiness', 'George Washington', 'Santa Clause', '-1', null, undefined, '' ])('AllowConigDump is false when ALLOW_CONFIG_DUMP is set to %s', element => {
-        process.env.ALLOW_CONFIG_DUMP = element;
-        const config = require('../config').getConfig();
-        expect(config.AllowConfigDump).toEqual(false);
-    });
+    it.each(['false', '-1', 'truthiness', 'George Washington', null, undefined, ''])(
+        'MessageFetchCount returns the default of 50 when MESSAGE_FETCH_COUNT is "%s"', value => {
+            process.env.MESSAGE_FETCH_COUNT = value;
+            const config = require('../config').getConfig();
+            expect(config.MessageFetchCount).toBe(50);
+        }
+    );
 
-    it.each([ 'false',  '-1', 'truthiness', 'George Washington', 'Santa Clause', null, undefined, '' ])('MessageFetchCount returns the default if %s is passed to it', (element) =>{
-        process.env.ALLOW_CONFIG_DUMP = element;
-        const config = require('../config').getConfig();
-        expect(config.MessageFetchCount).toEqual(50);
-    });
+    it.each(['1', '123', '0', '50000'])(
+        'MessageFetchCount returns %s when MESSAGE_FETCH_COUNT is "%s"', value => {
+            process.env.MESSAGE_FETCH_COUNT = value;
+            const config = require('../config').getConfig();
+            expect(config.MessageFetchCount).toBe(Number.parseInt(value));
+        }
+    );
 
-    it.each([ '1',  '123', '0', '50000' ])('MessageFetchCount returns the value of %s when process.env.MESSAGE_FETCH_COUNT is %s', (element) =>{
-        process.env.MESSAGE_FETCH_COUNT = element;
-        const config = require('../config').getConfig();
-        expect(config.MessageFetchCount).toEqual(Number.parseInt(element));
-    });
+    it.each([' ', '\t\n, ,', ',,,'])(
+        'SearchPhrasesToBlock ignores whitespace-only entries ("%s")', value => {
+            process.env.SEARCH_PHRASES_TO_BLOCK = value;
+            const config = require('../config').getConfig();
+            expect(config.SearchPhrasesToBlock).toEqual([]);
+        }
+    );
 
-    it.each([' ', '\t\n, ,', ',,,'])('Empty whitespace only value %s are ignored for SEARCH_PHRASES_TO_BLOCK', (element) => {
-        process.env.SEARCH_PHRASES_TO_BLOCK = element;
+    it('Token is read directly from the TOKEN env var', () => {
+        process.env.TOKEN = 'test-token-abc123';
         const config = require('../config').getConfig();
-        expect(config.SearchPhrasesToBlock).toEqual([]);
+        expect(config.Token).toBe('test-token-abc123');
     });
 });
