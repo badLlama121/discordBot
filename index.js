@@ -1,7 +1,8 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore, getTrending } = require('./scoring');
+const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand } = require('./reactions');
 const { oneBlockedMessage } = require('./one-blocked-message');
 
 const getCleansedConfig = () => ({ ...config, Token: undefined });
@@ -10,8 +11,12 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.MessageContent,
-    ]
+    ],
+    // Partials are required to receive reactions on messages the bot did not
+    // see when it started (i.e. messages not in the client's cache).
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 client.once('ready', () => {
@@ -39,6 +44,14 @@ client.on('messageCreate', async (message) => {
             }
         }
     }
+    else if (message.content.startsWith('!leader')) {
+        const parsed = parseLeaderCommand(message.content);
+        if (!parsed) {
+            message.channel.send('Usage: !leader <emoji>');
+        } else {
+            message.channel.send(getLeaderboard(parsed.key, parsed.display));
+        }
+    }
     else if (message.content.startsWith('!trending')) {
         message.channel.send(getTrending(5));
     }
@@ -51,6 +64,29 @@ client.on('messageCreate', async (message) => {
     else {
         processScores(message);
     }
+});
+
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+    try {
+        if (reaction.partial) await reaction.fetch();
+        if (reaction.message.partial) await reaction.message.fetch();
+    } catch (err) {
+        console.error('Failed to fetch reaction or message:', err);
+        return;
+    }
+    recordReaction(reaction, user);
+});
+
+client.on('messageReactionRemove', async (reaction, user) => {
+    if (user.bot) return;
+    try {
+        if (reaction.partial) await reaction.fetch();
+    } catch (err) {
+        console.error('Failed to fetch partial reaction:', err);
+        return;
+    }
+    removeReaction(reaction, user);
 });
 
 if (config.Token) {

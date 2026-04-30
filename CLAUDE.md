@@ -11,6 +11,7 @@ phrases and people, and lets users quote-edit each other's messages.
 | `!s <search>/` | Same, but deletes the matched phrase instead of replacing it |
 | `!score <phrase>` | Shows the total lifetime score for a phrase |
 | `!trending` | Top 5 and bottom 5 scoring phrases from the last 7 days |
+| `!leader <emoji>` | Top 5 users who received that emoji reaction in the last 30 days |
 | `!configDump` | Dumps sanitised config JSON (requires `ALLOW_CONFIG_DUMP=true`) |
 
 ## Passive Scoring
@@ -34,6 +35,7 @@ Scoring is case-insensitive. Phrase lookup via `!score` is also case-insensitive
 | `config.js` | Reads env vars; returns a typed, documented config object |
 | `db.js` | Opens the SQLite database singleton |
 | `scoring.js` | `processScores`, `getScore`, `getTrending` — all DB interaction; `parseScoreLine` is an internal pure helper |
+| `reactions.js` | `recordReaction`, `removeReaction`, `getLeaderboard`, `parseLeaderCommand` — emoji reaction tracking |
 | `replacer.js` | The full `!s` processing pipeline (see below) |
 | `one-blocked-message.js` | Random Easter egg that fires on `!s` and `!score` |
 
@@ -97,6 +99,33 @@ collisions (e.g. `!s url/link` cannot match the URL placeholder).
 | `ENTITY_PLACEHOLDER` | `\uE002`  | exported | Shields Discord entities from string replace |
 | `LT_PLACEHOLDER`     | `\uE003`  | internal | Shields `<` from `removeMd` inside `stripMarkdown` |
 | `GT_PLACEHOLDER`     | `\uE004`  | internal | Shields `>` from `removeMd` inside `stripMarkdown` |
+
+## `reactions.js` — Emoji Reaction Leaderboard
+
+The bot listens to `messageReactionAdd` and `messageReactionRemove` events and
+records them in a `reactions` SQLite table. The `!leader <emoji>` command queries
+this table to produce a ranked list.
+
+**Database schema** — PRIMARY KEY `(message_id, reactor_id, emoji)`:
+- At most one row per (message, user, emoji) combination at any time.
+- `INSERT OR IGNORE` on add: duplicate events (e.g. a bug double-firing) are
+  silently discarded.
+- `DELETE` on remove: if the user re-adds later, a new row is inserted. The
+  net count is always correct because the table reflects current state.
+
+**Self-reactions** are excluded at insert time (`user.id === message.author.id`).
+
+**Emoji key format**: Unicode emoji are stored as the character (`👍`); custom
+emoji are stored as `name:id` (`kirby:123456789`). Animated and non-animated
+variants of the same emoji share the same key (same Discord ID).
+
+**Partials**: The client is constructed with `Partials.Message`, `Partials.Channel`,
+and `Partials.Reaction` so that reactions on messages not in the bot's cache
+(e.g. messages sent before the bot started) are still received. Partial objects
+are fetched before processing.
+
+**History**: Only reactions witnessed while the bot is running are counted.
+There is no backfill for reactions that occurred before the feature was added.
 
 ## `scoring.js` Initialization
 
