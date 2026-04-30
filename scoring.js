@@ -37,37 +37,38 @@ function getScore(phrase) {
 }
 
 /**
- * Scans a message for scoring syntax and records any matches.
+ * Parses a single line for scoring syntax.
  *
- * Supported formats (per line):
+ * Supported formats:
  *   phrase++          → +1
  *   phrase-- / – / —  → -1
  *   ✨phrase✨         → +1
+ *
+ * @param {string} line
+ * @returns {{ phrase: string, score: number } | null}
+ */
+function parseScoreLine(line) {
+    if (line.endsWith('++'))
+        return { score: 1, phrase: line.replace(/\s*\++$/, '') };
+    if (SPARKLE_RE.test(line))
+        return { score: 1, phrase: line.match(SPARKLE_RE)[2] };
+    if (['--', '–', '—'].some(s => line.endsWith(s)))
+        return { score: -1, phrase: line.replace(/\s*[-–—]+$/, '') };
+    return null;
+}
+
+/**
+ * Scans a message for scoring syntax and records any matches.
  *
  * @param {{ content: string, author?: any }} message
  */
 function processScores(message) {
     ensureSchema();
-
-    message.content.split(/[\r\n]+/).forEach(line => {
-        let score = 0;
-        let phrase;
-
-        if (line.endsWith('++')) {
-            score = 1;
-            phrase = line.replace(/\s*[+]+$/, '');
-        } else if (SPARKLE_RE.test(line)) {
-            score = 1;
-            phrase = line.match(SPARKLE_RE)[2];
-        } else if (['--', '–', '—'].some(suffix => line.endsWith(suffix))) {
-            score = -1;
-            phrase = line.replace(/\s*[-–—]+$/, '');
-        } else {
-            return;
-        }
-
-        insertStmt.run(Date.now(), message.content, message.author?.toString(), phrase, score);
-    });
+    const author = message.author?.toString();
+    for (const line of message.content.split(/[\r\n]+/)) {
+        const scored = parseScoreLine(line);
+        if (scored) insertStmt.run(Date.now(), message.content, author, scored.phrase, scored.score);
+    }
 }
 
 /**
