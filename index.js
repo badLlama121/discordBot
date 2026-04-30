@@ -66,28 +66,23 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.on('messageReactionAdd', async (reaction, user) => {
+// Resolves any partial objects before delegating to the reaction handler.
+// messageReactionAdd also fetches the message (needed for author_id); Remove
+// only needs the reaction itself, since we only use message.id at that point.
+async function withResolvedReaction(reaction, user, { fetchMessage = false, handler }) {
     if (user.bot) return;
     try {
         if (reaction.partial) await reaction.fetch();
-        if (reaction.message.partial) await reaction.message.fetch();
+        if (fetchMessage && reaction.message.partial) await reaction.message.fetch();
     } catch (err) {
-        console.error('Failed to fetch reaction or message:', err);
+        console.error('Failed to fetch partial reaction or message:', err);
         return;
     }
-    recordReaction(reaction, user);
-});
+    handler(reaction, user);
+}
 
-client.on('messageReactionRemove', async (reaction, user) => {
-    if (user.bot) return;
-    try {
-        if (reaction.partial) await reaction.fetch();
-    } catch (err) {
-        console.error('Failed to fetch partial reaction:', err);
-        return;
-    }
-    removeReaction(reaction, user);
-});
+client.on('messageReactionAdd',    (r, u) => withResolvedReaction(r, u, { fetchMessage: true,  handler: recordReaction }));
+client.on('messageReactionRemove', (r, u) => withResolvedReaction(r, u, { fetchMessage: false, handler: removeReaction }));
 
 if (config.Token) {
     client.login(config.Token);

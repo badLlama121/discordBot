@@ -3,6 +3,12 @@ describe('reactions', () => {
         process.env.SCORE_DATABASE = ':memory:';
     });
 
+    const thumbsUp = { name: '👍', id: null };
+    const makeReaction = (messageId, authorId, emoji = thumbsUp) => ({
+        message: { id: messageId, author: { id: authorId } },
+        emoji,
+    });
+
     // ---------------------------------------------------------------------------
     // toEmojiKey
     // ---------------------------------------------------------------------------
@@ -55,12 +61,6 @@ describe('reactions', () => {
     // ---------------------------------------------------------------------------
 
     describe('recordReaction', () => {
-        const emoji = { name: '👍', id: null };
-        const makeReaction = (messageId, authorId) => ({
-            message: { id: messageId, author: { id: authorId } },
-            emoji,
-        });
-
         it('records a reaction and reflects it in the leaderboard', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
@@ -91,31 +91,24 @@ describe('reactions', () => {
         it('does not cross-contaminate different emoji', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' }); // 👍
-            const heartReaction = { message: { id: 'm2', author: { id: 'author1' } }, emoji: { name: '❤️', id: null } };
-            recordReaction(heartReaction, { id: 'reactor2' });
+            recordReaction(makeReaction('m2', 'author1', { name: '❤️', id: null }), { id: 'reactor2' });
             expect(getLeaderboard('👍', '👍')).toContain('<@author1> (1)');
             expect(getLeaderboard('❤️', '❤️')).toContain('<@author1> (1)');
         });
     });
 
     describe('removeReaction', () => {
-        const emoji = { name: '👍', id: null };
-        const makeReaction = (messageId, authorId) => ({
-            message: { id: messageId, author: { id: authorId } },
-            emoji,
-        });
-
         it('removes a recorded reaction from the leaderboard', () => {
             const { recordReaction, removeReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
-            removeReaction({ message: { id: 'm1' }, emoji }, { id: 'reactor1' });
+            removeReaction({ message: { id: 'm1' }, emoji: thumbsUp }, { id: 'reactor1' });
             expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
         });
 
         it('is idempotent — removing a non-existent reaction does not throw', () => {
             const { removeReaction } = require('../reactions');
             expect(() =>
-                removeReaction({ message: { id: 'no-such-message' }, emoji }, { id: 'reactor1' })
+                removeReaction({ message: { id: 'no-such-message' }, emoji: thumbsUp }, { id: 'reactor1' })
             ).not.toThrow();
         });
     });
@@ -132,12 +125,11 @@ describe('reactions', () => {
 
         it('ranks authors by total reactions received, highest first', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
-            const emoji = { name: '👍', id: null };
             // author2 gets 3, author1 gets 1
-            recordReaction({ message: { id: 'm1', author: { id: 'author2' } }, emoji }, { id: 'r1' });
-            recordReaction({ message: { id: 'm2', author: { id: 'author2' } }, emoji }, { id: 'r2' });
-            recordReaction({ message: { id: 'm3', author: { id: 'author2' } }, emoji }, { id: 'r3' });
-            recordReaction({ message: { id: 'm4', author: { id: 'author1' } }, emoji }, { id: 'r4' });
+            recordReaction(makeReaction('m1', 'author2'), { id: 'r1' });
+            recordReaction(makeReaction('m2', 'author2'), { id: 'r2' });
+            recordReaction(makeReaction('m3', 'author2'), { id: 'r3' });
+            recordReaction(makeReaction('m4', 'author1'), { id: 'r4' });
 
             const result = getLeaderboard('👍', '👍');
             expect(result).toContain('<@author2> (3)');
@@ -158,9 +150,8 @@ describe('reactions', () => {
 
         it('respects the limit parameter', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
-            const emoji = { name: '👍', id: null };
             ['a', 'b', 'c', 'd', 'e', 'f'].forEach((authorId, i) => {
-                recordReaction({ message: { id: `m${i}`, author: { id: authorId } }, emoji }, { id: `r${i}` });
+                recordReaction(makeReaction(`m${i}`, authorId), { id: `r${i}` });
             });
             const result = getLeaderboard('👍', '👍', 3);
             expect(result.split('\n')).toHaveLength(4); // header + 3 entries
