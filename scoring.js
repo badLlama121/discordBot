@@ -1,13 +1,28 @@
 const { getDatabase } = require('./db');
 
 const db = getDatabase();
+
+// Compiled once — used in every processScores call.
+const SPARKLE_RE = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
+
 let insertStmt;
+let getScoreStmt;
+let trendingStmt;
 
 function ensureSchema() {
     if (insertStmt) return;
     db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
     db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE);').run();
-    insertStmt = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
+    insertStmt   = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
+    getScoreStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE');
+    trendingStmt = db.prepare(`
+        SELECT phrase, SUM(score) as total
+        FROM scoring
+        WHERE timestamp >= ?
+        GROUP BY phrase COLLATE NOCASE
+        HAVING total != 0
+        ORDER BY total DESC
+    `);
 }
 
 /**
@@ -18,8 +33,7 @@ function ensureSchema() {
  */
 function getScore(phrase) {
     ensureSchema();
-    const row = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE;').get(phrase);
-    return row.total;
+    return getScoreStmt.get(phrase).total;
 }
 
 /**
@@ -42,9 +56,9 @@ function processScores(message) {
         if (line.endsWith('++')) {
             score = 1;
             phrase = line.replace(/\s*[+]+$/, '');
-        } else if (/^(✨ ?)+[^✨]+(✨ ?)+$/.test(line)) {
+        } else if (SPARKLE_RE.test(line)) {
             score = 1;
-            phrase = line.match(/^(✨ ?)+([^✨]+)(✨ ?)+$/)[2];
+            phrase = line.match(SPARKLE_RE)[2];
         } else if (['--', '–', '—'].some(suffix => line.endsWith(suffix))) {
             score = -1;
             phrase = line.replace(/\s*[-–—]+$/, '');
@@ -66,14 +80,7 @@ function processScores(message) {
 function getTrending(limit = 5) {
     ensureSchema();
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const rows = db.prepare(`
-        SELECT phrase, SUM(score) as total
-        FROM scoring
-        WHERE timestamp >= ?
-        GROUP BY phrase COLLATE NOCASE
-        HAVING total != 0
-        ORDER BY total DESC
-    `).all(since);
+    const rows = trendingStmt.all(since);
 
     const top = rows.slice(0, limit);
     const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();

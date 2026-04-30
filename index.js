@@ -21,10 +21,10 @@ client.once('ready', () => {
 client.on('messageCreate', async (initialQuery) => {
     if (initialQuery.author.bot) return;
 
-    if (config.AllowConfigDump === true && initialQuery.content.indexOf('!configDump') === 0) {
+    if (config.AllowConfigDump === true && initialQuery.content.startsWith('!configDump')) {
         initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}\n\`\`\``);
     }
-    else if (initialQuery.content.indexOf('!s ') === 0) {
+    else if (initialQuery.content.startsWith('!s ')) {
         console.log('Quoting user ' + initialQuery.author.username);
 
         if (oneBlockedMessage(initialQuery)) return;
@@ -39,10 +39,10 @@ client.on('messageCreate', async (initialQuery) => {
             }
         }
     }
-    else if (initialQuery.content.indexOf('!trending') === 0) {
+    else if (initialQuery.content.startsWith('!trending')) {
         initialQuery.channel.send(getTrending(5));
     }
-    else if (initialQuery.content.indexOf('!score ') === 0) {
+    else if (initialQuery.content.startsWith('!score ')) {
         if (oneBlockedMessage(initialQuery)) return;
 
         const phrase = initialQuery.content.replace(/^!score/, '').trim();

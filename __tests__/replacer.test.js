@@ -59,17 +59,21 @@ describe('Tests the replacer module', () => {
         expect(channel.send).toHaveBeenCalledWith(expected);
     });
 
-    it('tests that multiple concurrent replacements in a single string get formatted correctly', () => {
+    it('collapses adjacent bold markers when a term appears twice consecutively', () => {
         const sut = splitReplaceCommand('!s z/t');
-        const messages = [{
-            content: 'nice peppy buzz',
-            author: 'author'
-        }];
-        const expected = 'author nice peppy bu**tt**';
-        const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
-
+        const msgs = [{ content: 'nice peppy buzz', author: 'author' }];
+        const actual = replaceFirstMessage(msgs, sut.search, sut.replacement, channel);
         expect(actual).toBe(false);
-        expect(channel.send).toHaveBeenCalledWith(expected);
+        expect(channel.send).toHaveBeenCalledWith('author nice peppy bu**tt**');
+    });
+
+    it('collapses adjacent bold markers when a term appears 3+ times consecutively', () => {
+        // Regression: non-global \v\v replace left dangling ** markers on 3+ consecutive matches.
+        const sut = splitReplaceCommand('!s ha/he');
+        const msgs = [{ content: 'hahahaha', author: 'author' }];
+        const actual = replaceFirstMessage(msgs, sut.search, sut.replacement, channel);
+        expect(actual).toBe(false);
+        expect(channel.send).toHaveBeenCalledWith('author **hehehehe**');
     });
 
     it.each(['', null, undefined, false, 0])('tests the case for no replacement', (emptyIshStringIsh) => {
@@ -88,10 +92,14 @@ describe('Tests the replacer module', () => {
         expect(channel.send).toHaveBeenCalledWith('author No I used this for my demo so I could justify going **the budget**');
     });
 
-    it('tests that the no match leads to a true return', () => {
-        const regex = new RegExp('It was the best of times and it was the worst of times', 'gi');
-        const actual = replaceFirstMessage(messages, regex, 'the budget', channel);
+    it('returns true when no message contains the search term', () => {
+        const actual = replaceFirstMessage(messages, 'It was the best of times', 'the budget', channel);
+        expect(actual).toBe(true);
+        expect(channel.send).not.toHaveBeenCalled();
+    });
 
+    it('returns true immediately when searchTerm is not a string', () => {
+        const actual = replaceFirstMessage(messages, /regex/, 'the budget', channel);
         expect(actual).toBe(true);
         expect(channel.send).not.toHaveBeenCalled();
     });
@@ -144,13 +152,19 @@ describe('Tests the replacer module', () => {
         expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('doesnt strip angle brackets', () => {
+    it('preserves angle brackets around the replaced term', () => {
         const sut = splitReplaceCommand('!s dumb person/CTO');
-
         const actual = replaceFirstMessage(messages, sut.search, sut.replacement, channel);
-
         expect(actual).toBe(false);
         expect(channel.send).toHaveBeenCalledWith('author I am a <**CTO**>');
+    });
+
+    it('preserves multiple angle-bracket spans on the same line', () => {
+        // Regression: greedy <(.*)> matched from the first < to the last >, mangling everything between.
+        const msgs = [{ content: 'I am <foo> and also <bar>', author: { bot: false, toString: () => 'author' } }];
+        const sut = splitReplaceCommand('!s foo/baz');
+        replaceFirstMessage(msgs, sut.search, sut.replacement, channel);
+        expect(channel.send).toHaveBeenCalledWith('author I am <**baz**> and also <bar>');
     });
 
     it('does not replace inside custom emoji IDs', () => {

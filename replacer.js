@@ -78,7 +78,7 @@ function extractUrls(str) {
  * @returns {string}
  */
 function escapeAngleBrackets(str) {
-    return str.replace(/<(.*)>/gi, '{LESS_THAN}$1{GREATER_THAN}');
+    return str.replace(/<([^>]*)>/g, '{LESS_THAN}$1{GREATER_THAN}');
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ function stripMarkdown(str) {
 
 /**
  * Replaces all occurrences of `find` in `str` with `token`.
- * When `ignoreCase` is true, `find` is treated as a literal string.
+ * When `ignoreCase` is true, `find` is matched literally but case-insensitively.
  *
  * @param {string} str
  * @param {string} find
@@ -181,7 +181,7 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
             // Adjacent markers collapse (\v\v → '') so consecutive matches yield
             // a single **bold run** rather than an ugly ****empty gap****.
             result = replaceOccurrences(cleansed, searchTerm, `\v${replacement}\v`, true)
-                .replace('\v\v', '')
+                .replace(/\v\v/g, '')
                 .replace(/\v/g, '**');
         } else {
             result = replaceOccurrences(cleansed, searchTerm, '', true);
