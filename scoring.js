@@ -5,25 +5,22 @@ const db = getDatabase();
 // Compiled once — used in every processScores call.
 const SPARKLE_RE = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
 
-let insertStmt;
-let getScoreStmt;
-let trendingStmt;
+// Schema and prepared statements are initialized at module load. Because Jest
+// uses resetModules: true, each test gets a fresh module (and a fresh :memory:
+// database), so eager initialization is equivalent to lazy for test isolation.
+db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
+db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE);').run();
 
-function ensureSchema() {
-    if (insertStmt) return;
-    db.prepare('CREATE TABLE IF NOT EXISTS scoring (timestamp INT NULL, message TEXT NULL, author TEXT NULL, phrase TEXT NOT NULL, score NUMBER NOT NULL);').run();
-    db.prepare('CREATE INDEX IF NOT EXISTS IX_scoring_phrase ON scoring(phrase COLLATE NOCASE);').run();
-    insertStmt   = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
-    getScoreStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE');
-    trendingStmt = db.prepare(`
-        SELECT phrase, SUM(score) as total
-        FROM scoring
-        WHERE timestamp >= ?
-        GROUP BY phrase COLLATE NOCASE
-        HAVING total != 0
-        ORDER BY total DESC
-    `);
-}
+const insertStmt   = db.prepare('INSERT INTO scoring (timestamp, message, author, phrase, score) VALUES (?, ?, ?, ?, ?)');
+const getScoreStmt = db.prepare('SELECT COALESCE(SUM(score), 0) as total FROM scoring WHERE phrase = ? COLLATE NOCASE');
+const trendingStmt = db.prepare(`
+    SELECT phrase, SUM(score) as total
+    FROM scoring
+    WHERE timestamp >= ?
+    GROUP BY phrase COLLATE NOCASE
+    HAVING total != 0
+    ORDER BY total DESC
+`);
 
 /**
  * Returns the total lifetime score for a phrase.
@@ -32,7 +29,6 @@ function ensureSchema() {
  * @returns {number}
  */
 function getScore(phrase) {
-    ensureSchema();
     return getScoreStmt.get(phrase).total;
 }
 
@@ -63,7 +59,6 @@ function parseScoreLine(line) {
  * @param {{ content: string, author?: any }} message
  */
 function processScores(message) {
-    ensureSchema();
     const author = message.author?.toString();
     for (const line of message.content.split(/[\r\n]+/)) {
         const scored = parseScoreLine(line);
@@ -79,11 +74,10 @@ function processScores(message) {
  * @returns {string}
  */
 function getTrending(limit = 5) {
-    ensureSchema();
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const rows = trendingStmt.all(since);
 
-    const top = rows.slice(0, limit);
+    const top    = rows.slice(0, limit);
     const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();
 
     const fmt = (rows, label) => {

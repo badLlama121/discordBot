@@ -52,6 +52,18 @@ describe('scoring module', () => {
         expect(result).toContain('Bottom 5: none');
     });
 
+    it('getTrending: does not show a phrase in both top and bottom', () => {
+        const { processScores, getTrending } = require('../scoring');
+        // 3 phrases with limit=2 → bottom slice [beta, gamma] overlaps with top [alpha, beta].
+        // The filter must remove beta from bottom so it appears only once.
+        ['alpha++', 'alpha++', 'alpha++', 'beta++', 'gamma--', 'gamma--']
+            .forEach(line => processScores({ content: line }));
+        const result = getTrending(2);
+        const bottomSection = result.split('**Bottom 2**')[1];
+        expect(bottomSection).toContain('gamma');
+        expect(bottomSection).not.toContain('beta');
+    });
+
     it('getTrending excludes scores older than 7 days', () => {
         const { processScores, getTrending } = require('../scoring');
         const { getDatabase } = require('../db');

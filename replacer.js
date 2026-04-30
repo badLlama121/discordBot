@@ -7,6 +7,16 @@ const removeMd = require('remove-markdown');
 const URL_PLACEHOLDER    = '\uE001';
 const ENTITY_PLACEHOLDER = '\uE002';
 
+// Compiled once at module load — used on every processed message.
+const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
+const URL_RE    = /((https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?)/gi;
+
+// Pre-compiled blocked-phrase patterns — normalised to strip diacritics so that
+// accent variants of a blocked word are caught without special-casing each one.
+const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
+    new RegExp(p.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), 'iu')
+);
+
 // ---------------------------------------------------------------------------
 // Text normalization
 // ---------------------------------------------------------------------------
@@ -45,10 +55,9 @@ function normalizeUnicode(str) {
  * @returns {{ cleansed: string, entities: string[] | null }}
  */
 function extractDiscordEntities(str) {
-    const entityRegex = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
     return {
-        cleansed: str.replace(entityRegex, ENTITY_PLACEHOLDER),
-        entities: str.match(entityRegex)
+        cleansed: str.replace(ENTITY_RE, ENTITY_PLACEHOLDER),
+        entities: str.match(ENTITY_RE)
     };
 }
 
@@ -61,10 +70,9 @@ function extractDiscordEntities(str) {
  * @returns {{ cleansed: string, urls: string[] | null }}
  */
 function extractUrls(str) {
-    const urlRegex = /((https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?)/gi;
     return {
-        cleansed: str.replace(urlRegex, URL_PLACEHOLDER),
-        urls: str.match(urlRegex)
+        cleansed: str.replace(URL_RE, URL_PLACEHOLDER),
+        urls: str.match(URL_RE)
     };
 }
 
@@ -119,22 +127,18 @@ function stripMarkdown(str) {
 // ---------------------------------------------------------------------------
 
 /**
- * Replaces all occurrences of `find` in `str` with `token`.
- * When `ignoreCase` is true, `find` is matched literally but case-insensitively.
+ * Replaces all occurrences of `find` in `str` with `replacement`,
+ * matching literally and case-insensitively.
  *
  * @param {string} str
  * @param {string} find
- * @param {string} [token='']
- * @param {boolean} [ignoreCase=false]
+ * @param {string} [replacement='']
  * @returns {string}
  */
-function replaceOccurrences(str, find, token = '', ignoreCase = false) {
-    if (find == null || find === '') return str;
-    if (ignoreCase) {
-        const escaped = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return str.replace(new RegExp(escaped, 'gi'), token);
-    }
-    return str.replaceAll(find, token);
+function replaceOccurrences(str, find, replacement = '') {
+    if (!find) return str;
+    const escaped = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(new RegExp(escaped, 'gi'), replacement);
 }
 
 /**
@@ -180,11 +184,11 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
             // Wrap the replacement with \v as a temporary bold marker.
             // Adjacent markers collapse (\v\v → '') so consecutive matches yield
             // a single **bold run** rather than an ugly ****empty gap****.
-            result = replaceOccurrences(cleansed, searchTerm, `\v${replacement}\v`, true)
+            result = replaceOccurrences(cleansed, searchTerm, `\v${replacement}\v`)
                 .replace(/\v\v/g, '')
                 .replace(/\v/g, '**');
         } else {
-            result = replaceOccurrences(cleansed, searchTerm, '', true);
+            result = replaceOccurrences(cleansed, searchTerm);
         }
 
         entities?.forEach(e  => { result = result.replace(ENTITY_PLACEHOLDER, e);   });
@@ -222,9 +226,7 @@ function splitReplaceCommand(command) {
  * @returns {boolean}
  */
 function isBlockedPhrase(phrase) {
-    return config.SearchPhrasesToBlock.some(blocked =>
-        phrase.match(new RegExp(blocked.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), 'iu'))
-    );
+    return BLOCKED_PHRASE_RES.some(re => re.test(phrase));
 }
 
 module.exports = {
