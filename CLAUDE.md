@@ -87,14 +87,16 @@ load. Changing that env var requires a bot restart to take effect.
 
 ### Placeholders
 
-`URL_PLACEHOLDER` (`\uE001`) and `ENTITY_PLACEHOLDER` (`\uE002`) are Unicode
-private-use-area characters. They cannot appear in Discord messages, so they
-are immune to accidental search-term collisions (e.g. `!s url/link` cannot
-match the placeholder).
+All four placeholder constants are Unicode private-use-area characters. They
+cannot appear in Discord messages, so they are immune to accidental search-term
+collisions (e.g. `!s url/link` cannot match the URL placeholder).
 
-`{LESS_THAN}` / `{GREATER_THAN}` are plain string tokens used only within
-`stripMarkdown` to survive `removeMd`. They are not PUA characters and are not
-exported; they never appear outside that function.
+| Constant            | Codepoint | Scope    | Purpose                                      |
+|---------------------|-----------|----------|----------------------------------------------|
+| `URL_PLACEHOLDER`    | `\uE001`  | exported | Shields extracted URLs from string replace   |
+| `ENTITY_PLACEHOLDER` | `\uE002`  | exported | Shields Discord entities from string replace |
+| `LT_PLACEHOLDER`     | `\uE003`  | internal | Shields `<` from `removeMd` inside `stripMarkdown` |
+| `GT_PLACEHOLDER`     | `\uE004`  | internal | Shields `>` from `removeMd` inside `stripMarkdown` |
 
 ## `scoring.js` Initialization
 

@@ -3,7 +3,8 @@ const { getDatabase } = require('./db');
 const db = getDatabase();
 
 // Compiled once — used in parseScoreLine on every processed message.
-const SPARKLE_RE = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
+const SPARKLE_RE    = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Schema and prepared statements are initialized at module load. Because Jest
 // uses resetModules: true, each test gets a fresh module (and a fresh :memory:
@@ -46,8 +47,9 @@ function getScore(phrase) {
 function parseScoreLine(line) {
     if (line.endsWith('++'))
         return { score: 1, phrase: line.replace(/\s*\++$/, '') };
-    if (SPARKLE_RE.test(line))
-        return { score: 1, phrase: line.match(SPARKLE_RE)[2] };
+    const sparkle = SPARKLE_RE.exec(line);
+    if (sparkle)
+        return { score: 1, phrase: sparkle[2] };
     if (['--', '–', '—'].some(s => line.endsWith(s)))
         return { score: -1, phrase: line.replace(/\s*[-–—]+$/, '') };
     return null;
@@ -74,16 +76,16 @@ function processScores(message) {
  * @returns {string}
  */
 function getTrending(limit = 5) {
-    const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const since = Date.now() - SEVEN_DAYS_MS;
     const rows = trendingStmt.all(since);
 
     const top    = rows.slice(0, limit);
     // Reference equality is intentional — top and slice(-limit) share objects from rows.
     const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();
 
-    const fmt = (rows, label) => {
-        if (rows.length === 0) return `*${label}: none*`;
-        return `**${label}**\n` + rows.map((r, i) =>
+    const fmt = (entries, label) => {
+        if (entries.length === 0) return `*${label}: none*`;
+        return `**${label}**\n` + entries.map((r, i) =>
             `${i + 1}. ${r.phrase} (${r.total > 0 ? '+' : ''}${r.total})`
         ).join('\n');
     };
