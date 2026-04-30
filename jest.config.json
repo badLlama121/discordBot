@@ -9,12 +9,12 @@
       "resetMocks": true,
       "resetModules": true,
       "collectCoverage": true,
-       "coverageThreshold": {
+    "coverageThreshold": {
         "global": {
-            "branches": 59,
-            "functions": 77,
-            "lines": 66,
-            "statements": 66
+            "branches": 65,
+            "functions": 88,
+            "lines": 73,
+            "statements": 73
         }
     }
 }
