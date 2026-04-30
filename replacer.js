@@ -36,17 +36,13 @@ String.prototype.unicodeToMerica = function () {
 
 /// Lets remove the markdown
 String.prototype.deMarkDown = function () {
-    const emojiExtractedString = extractEmoji(this);
-    const userExtractedString = extractUsers(emojiExtractedString.cleansed);
-    let replacePhrase = extractGtAndLt(userExtractedString.cleansed);
+    const extracted = extractDiscordEntities(this);
+    let replacePhrase = extractGtAndLt(extracted.cleansed);
     replacePhrase = removeMd(replacePhrase)
         .replace('{LESS_THAN}', '<')
         .replace('{GREATER_THAN}', '>');
-    userExtractedString.users?.forEach(user => {
-        replacePhrase = replacePhrase.replace('|{|user|}|', user);
-    });
-    emojiExtractedString.emojis?.forEach(emoji => {
-        replacePhrase = replacePhrase.replace('|{|emoji|}|', emoji);
+    extracted.entities?.forEach(entity => {
+        replacePhrase = replacePhrase.replace('|{|entity|}|', entity);
     });
     return replacePhrase;
 };
@@ -67,25 +63,20 @@ function extractUrls(inputString) {
 }
 
 /**
- * Takes a string as input and outputs an object with two properties: `cleansed` and `USERS`.
- * The `cleansed` property contains the original string but with all users replaced with `|{|user|}|`.
- * The `users` property is an array of all removed users.
+ * Extracts all Discord-encoded entities (mentions, emoji, channels, timestamps) from a string,
+ * replacing each with a `|{|entity|}|` placeholder so downstream processing can't corrupt their contents.
  *
- * @param {string} inputString - The input string to cleanse.
- * @returns {{cleansed: string, urls: string[]}} - An object with two properties: `cleansed` and `urls`.
+ * Covers: user mentions <@id> <@!id>, role mentions <@&id>, channel mentions <#id>,
+ * custom emoji <:name:id> <a:name:id>, and timestamps <t:unix:format>.
+ *
+ * @param {string} inputString
+ * @returns {{cleansed: string, entities: string[]}}
  */
-function extractUsers(inputString) {
-    const userRegex = /<@[0-9]+>/gi;
-    const users = inputString.match(userRegex);
-    const cleansed = inputString.replace(userRegex, '|{|user|}|');
-    return { cleansed, users };
-}
-
-function extractEmoji(inputString) {
-    const emojiRegex = /<a?:[a-zA-Z0-9_]+:[0-9]+>/gi;
-    const emojis = inputString.match(emojiRegex);
-    const cleansed = inputString.replace(emojiRegex, '|{|emoji|}|');
-    return { cleansed, emojis };
+function extractDiscordEntities(inputString) {
+    const entityRegex = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
+    const entities = inputString.match(entityRegex);
+    const cleansed = inputString.replace(entityRegex, '|{|entity|}|');
+    return { cleansed, entities };
 }
 
 /**
@@ -114,7 +105,7 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
     if(! regex.toLocaleLowerCase) {
         return true;
     }
-    
+
     const lowerCaseSearch = regex.toLocaleLowerCase();
 
     return messages.every(msg => {
@@ -122,20 +113,24 @@ function replaceFirstMessage(messages, regex, replacement, channel) {
             console.debug('Ignoring message from bot or search message');
             return true;
         }
-        const cleansedMessage = extractUrls(msg.content.unicodeToMerica().deMarkDown());
-        if(cleansedMessage.cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
+        const { cleansed: afterEntities, entities } = extractDiscordEntities(msg.content.unicodeToMerica().deMarkDown());
+        const { cleansed, urls } = extractUrls(afterEntities);
+        if(cleansed.toLocaleLowerCase().includes(lowerCaseSearch)) {
             console.log(`Match found for message "${msg.content}" with regex "${regex}"`);
             let replacePhrase = '';
             if (typeof replacement === 'string' && replacement.length > 0) {
                 // Use replacement if it's a non-empty string
-                replacePhrase = replaceAll(cleansedMessage.cleansed, regex, '\v' + replacement + '\v', true)
+                replacePhrase = replaceAll(cleansed, regex, '\v' + replacement + '\v', true)
                     .replace('\v\v', '')
                     .replace(/\v/g, '**');
             } else {
                 // For empty string, null, undefined, false, 0, remove the matched phrase
-                replacePhrase = replaceAll(cleansedMessage.cleansed, regex, '', true);
+                replacePhrase = replaceAll(cleansed, regex, '', true);
             }
-            cleansedMessage.urls?.forEach(url => {
+            entities?.forEach(entity => {
+                replacePhrase = replacePhrase.replace('|{|entity|}|', entity);
+            });
+            urls?.forEach(url => {
                 replacePhrase = replacePhrase.replace('|{|url|}|', url);
             });
             channel.send(msg.author.toString() + ' ' + replacePhrase);
@@ -180,7 +175,7 @@ function isBlockedSearchPhrase(phrase) {
 
 module.exports = {
     extractUrls,
-    extractEmoji,
+    extractDiscordEntities,
     replaceFirstMessage,
     splitReplaceCommand
 };
