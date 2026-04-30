@@ -29,10 +29,10 @@ client.on('messageCreate', async (message) => {
 
         if (oneBlockedMessage(message)) return;
 
-        const channel = message.channel;
-        const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
         const cmd = splitReplaceCommand(message.content);
         if (!cmd.isBlockedPhrase) {
+            const channel = message.channel;
+            const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
             const failedToFind = replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
             if (failedToFind) {
                 channel.send(`${message.author} nobody said that, dumb ass`);
@@ -45,7 +45,7 @@ client.on('messageCreate', async (message) => {
     else if (message.content.startsWith('!score ')) {
         if (oneBlockedMessage(message)) return;
 
-        const phrase = message.content.replace(/^!score/, '').trim();
+        const phrase = message.content.slice('!score '.length).trim();
         message.channel.send(`Score *${phrase}*: ${getScore(phrase)}`);
     }
     else {

@@ -3,7 +3,7 @@ const { getDatabase } = require('./db');
 const db = getDatabase();
 
 // Compiled once — used in parseScoreLine on every processed message.
-const SPARKLE_RE    = /^(✨ ?)+([^✨]+)(✨ ?)+$/;
+const SPARKLE_RE    = /^(?:✨ ?)+([^✨]+)(?:✨ ?)+$/;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Schema and prepared statements are initialized at module load. Because Jest
@@ -57,7 +57,7 @@ function parseScoreLine(line) {
         return { score: 1, phrase: line.replace(/\s*\++$/, '') };
     const sparkle = SPARKLE_RE.exec(line);
     if (sparkle)
-        return { score: 1, phrase: sparkle[2] };
+        return { score: 1, phrase: sparkle[1] };
     if (['--', '–', '—'].some(s => line.endsWith(s)))
         return { score: -1, phrase: line.replace(/\s*[-–—]+$/, '') };
     return null;
