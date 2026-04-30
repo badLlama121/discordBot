@@ -180,7 +180,8 @@ describe('replaceFirstMessage', () => {
     });
 
     it('restores all angle brackets in a multi-line message', () => {
-        // Regression: non-global {GREATER_THAN} restore missed the second bracket.
+        // Regression: bracket restoration was not global; only the first bracket in
+        // a multi-bracket message was restored, leaving the rest as raw placeholders.
         const msgs = [{ content: '<foo>\n<bar>', author }];
         const { search, replacement } = splitReplaceCommand('!s foo/baz');
         replaceFirstMessage(msgs, search, replacement, channel);
@@ -228,17 +229,19 @@ describe('replaceFirstMessage', () => {
     });
 
     it('does not replace inside custom emoji IDs', () => {
+        // The search term only exists inside entity IDs; extraction must prevent any match.
         const msgs = [{ content: '<a:aniblobsweat:488851906022825677> <a:aniblobsweat:488851906022825677>', author }];
         const { search, replacement } = splitReplaceCommand('!s 6/bo');
         replaceFirstMessage(msgs, search, replacement, channel);
-        expect(channel.send).not.toHaveBeenCalledWith(expect.stringContaining('bo22825bo'));
+        expect(channel.send).not.toHaveBeenCalled();
     });
 
     it('does not replace inside role or channel mention IDs', () => {
+        // The search term only exists inside entity IDs; extraction must prevent any match.
         const msgs = [{ content: 'check <@&988765432100123456> and <#123456789012345678>', author }];
         const { search, replacement } = splitReplaceCommand('!s 5/x');
         replaceFirstMessage(msgs, search, replacement, channel);
-        expect(channel.send).not.toHaveBeenCalledWith(expect.stringMatching(/<@&|<#/));
+        expect(channel.send).not.toHaveBeenCalled();
     });
 
     it('does not match placeholder text when searching for "url"', () => {

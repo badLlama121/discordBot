@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const getConfig = () => {
-    const messageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT);
+    const messageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT, 10);
     const oneBlockedPercent = Number.parseFloat(process.env.ONE_BLOCKED_PERCENT);
     const realestOneBlockedPercent = Number.parseFloat(process.env.REALEST_ONE_BLOCKED_PERCENT);
     const searchPhrasesToBlock = (process.env.SEARCH_PHRASES_TO_BLOCK ?? '').split(',').filter(phrase => phrase.trim() !== '');
