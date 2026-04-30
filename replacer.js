@@ -6,10 +6,12 @@ const removeMd = require('remove-markdown');
 // accidentally match a user's search term or appear in output.
 const URL_PLACEHOLDER    = '\uE001';
 const ENTITY_PLACEHOLDER = '\uE002';
+const LT_PLACEHOLDER     = '\uE003'; // used only within stripMarkdown
+const GT_PLACEHOLDER     = '\uE004'; // used only within stripMarkdown
 
 // Compiled once at module load — used on every processed message.
 const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
-const URL_RE    = /((https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?)/gi;
+const URL_RE    = /(https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?/gi;
 
 // Pre-compiled blocked-phrase patterns — normalised to strip diacritics so that
 // accent variants of a blocked word are caught without special-casing each one.
@@ -77,16 +79,16 @@ function extractUrls(str) {
 }
 
 /**
- * Escapes `<...>` patterns to opaque tokens so `removeMd` doesn't interpret
- * them as HTML tags. Tokens are restored with a global replace after `removeMd` runs.
- * Discord entities are extracted before this runs, so only user-typed angle brackets
- * (e.g. `<sarcasm>`) reach this function.
+ * Replaces `<...>` spans with PUA-character-delimited tokens so `removeMd`
+ * doesn't interpret them as HTML tags. Tokens are restored in `stripMarkdown`
+ * after `removeMd` runs. Discord entities are already extracted before this
+ * runs, so only user-typed angle brackets (e.g. `<sarcasm>`) reach this function.
  *
  * @param {string} str
  * @returns {string}
  */
 function escapeAngleBrackets(str) {
-    return str.replace(/<([^>]*)>/g, '{LESS_THAN}$1{GREATER_THAN}');
+    return str.replace(/<([^>]*)>/g, `${LT_PLACEHOLDER}$1${GT_PLACEHOLDER}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -113,8 +115,8 @@ function stripMarkdown(str) {
     const { cleansed: withoutUrls, urls } = extractUrls(withLinksExpanded);
 
     let result = removeMd(escapeAngleBrackets(withoutUrls))
-        .replace(/\{LESS_THAN\}/g, '<')
-        .replace(/\{GREATER_THAN\}/g, '>');
+        .split(LT_PLACEHOLDER).join('<')
+        .split(GT_PLACEHOLDER).join('>');
 
     urls?.forEach(url    => { result = result.replace(URL_PLACEHOLDER,    url);    });
     entities?.forEach(e  => { result = result.replace(ENTITY_PLACEHOLDER, e);      });
@@ -188,10 +190,10 @@ function replaceFirstMessage(messages, searchTerm, replacement, channel) {
             return true;
         }
 
-        const { cleansed: afterEntities, entities } = extractDiscordEntities(
+        const { cleansed: withoutEntities, entities } = extractDiscordEntities(
             stripMarkdown(normalizeUnicode(msg.content))
         );
-        const { cleansed, urls } = extractUrls(afterEntities);
+        const { cleansed, urls } = extractUrls(withoutEntities);
 
         if (!cleansed.toLocaleLowerCase().includes(lowerSearch)) {
             console.debug(`No match in "${msg.content}" for "${searchTerm}"`);
