@@ -4,6 +4,7 @@ const getConfig = () => {
     const messageFetchCount = Number.parseInt(process.env.MESSAGE_FETCH_COUNT, 10);
     const oneBlockedPercent = Number.parseFloat(process.env.ONE_BLOCKED_PERCENT);
     const realestOneBlockedPercent = Number.parseFloat(process.env.REALEST_ONE_BLOCKED_PERCENT);
+    const dreadInactivityHours = Number.parseFloat(process.env.DREAD_INACTIVITY_HOURS);
     const searchPhrasesToBlock = (process.env.SEARCH_PHRASES_TO_BLOCK ?? '').split(',').filter(phrase => phrase.trim() !== '');
 
     return {
@@ -30,6 +31,9 @@ const getConfig = () => {
 
         /** Comma-separated list of phrases blocked from !s search and replacement. */
         SearchPhrasesToBlock: searchPhrasesToBlock,
+
+        /** Milliseconds of inactivity before the bot posts an existential dread message in #general. */
+        DreadInactivityMs: (dreadInactivityHours > 0 ? dreadInactivityHours : 2) * 60 * 60 * 1000,
 
         /** Discord bot token. Required. */
         Token: process.env.TOKEN

@@ -14,6 +14,7 @@ phrases and people.
    ```sh
    TOKEN=your_discord_bot_token_here
    ALLOW_CONFIG_DUMP=true
+   DREAD_INACTIVITY_HOURS=0.01  # optional: set low to test the existential dread feature
    ```
 4. Start the bot (auto-restarts on file changes):
    ```sh

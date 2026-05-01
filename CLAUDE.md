@@ -155,6 +155,7 @@ unchanged.
 | `REALEST_ONE_BLOCKED_PERCENT` | `5` | Easter egg trigger chance (%) for `THE_REALEST_MFERS` |
 | `THE_REALEST_MFERS` | `kerouac5` | Semicolon-separated VIP usernames |
 | `SEARCH_PHRASES_TO_BLOCK` | — | Comma-separated phrases blocked from `!s` (regex-capable; restart required to apply changes) |
+| `DREAD_INACTIVITY_HOURS` | `2` | Hours of silence before the bot posts an existential dread message in `#general`; set low (e.g. `0.01`) to test locally |
 
 ## Testing
 

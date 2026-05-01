@@ -4,6 +4,7 @@ const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore, getTrending } = require('./scoring');
 const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand, registerProxyMessage } = require('./reactions');
 const { oneBlockedMessage } = require('./one-blocked-message');
+const { recordActivity } = require('./dread');
 
 const getCleansedConfig = () => ({ ...config, Token: undefined });
 
@@ -25,6 +26,7 @@ client.once('ready', () => {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+    await recordActivity(message.channel);
 
     if (config.AllowConfigDump === true && message.content.startsWith('!configDump')) {
         message.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}\n\`\`\``);
@@ -73,6 +75,7 @@ client.on('messageCreate', async (message) => {
 // only needs the reaction itself, since we only use message.id at that point.
 async function withResolvedReaction(reaction, user, { fetchMessage = false, handler }) {
     if (user.bot) return;
+    await recordActivity(reaction.message.channel);
     try {
         if (reaction.partial) await reaction.fetch();
         if (fetchMessage && reaction.message.partial) await reaction.message.fetch();
