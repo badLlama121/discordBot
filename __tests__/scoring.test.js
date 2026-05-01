@@ -45,17 +45,17 @@ describe('scoring', () => {
                 .forEach(line => processScores({ content: line }));
 
             const result = getTrending(2);
-            expect(result).toContain('pizza (+3)');
-            expect(result).toContain('jazz (+2)');
-            expect(result).toContain('mondays (-3)');
-            expect(result).toContain('meetings (-1)');
+            expect(result).toContain('pizza +3');
+            expect(result).toContain('jazz +2');
+            expect(result).toContain('mondays -3');
+            expect(result).toContain('meetings -1');
         });
 
         it('shows none when there is no recent data', () => {
             const { getTrending } = require('../scoring');
             const result = getTrending(5);
-            expect(result).toContain('Top 5: none');
-            expect(result).toContain('Bottom 5: none');
+            expect(result).toContain('↑ none');
+            expect(result).toContain('↓ none');
         });
 
         it('does not show a phrase in both top and bottom', () => {
@@ -65,7 +65,7 @@ describe('scoring', () => {
             ['alpha++', 'alpha++', 'alpha++', 'beta++', 'gamma--', 'gamma--']
                 .forEach(line => processScores({ content: line }));
             const result = getTrending(2);
-            const bottomSection = result.split('**Bottom 2**')[1];
+            const bottomSection = result.split(' | ↓ ')[1];
             expect(bottomSection).toContain('gamma');
             expect(bottomSection).not.toContain('beta');
         });

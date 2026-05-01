@@ -91,14 +91,11 @@ function getTrending(limit = 5) {
     // Reference equality is intentional — top and slice(-limit) share objects from rows.
     const bottom = rows.slice(-limit).filter(r => !top.includes(r)).reverse();
 
-    const fmt = (entries, label) => {
-        if (entries.length === 0) return `*${label}: none*`;
-        return `**${label}**\n` + entries.map((r, i) =>
-            `${i + 1}. ${r.phrase} (${r.total > 0 ? '+' : ''}${r.total})`
-        ).join('\n');
-    };
+    const fmtList = entries =>
+        entries.length === 0 ? 'none'
+            : entries.map(r => `${r.phrase} ${r.total > 0 ? '+' : ''}${r.total}`).join(', ');
 
-    return `Trending last 7 days:\n${fmt(top, `Top ${limit}`)}\n\n${fmt(bottom, `Bottom ${limit}`)}`;
+    return `**Trending (7d)** ↑ ${fmtList(top)} | ↓ ${fmtList(bottom)}`;
 }
 
 module.exports = {
