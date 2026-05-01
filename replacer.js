@@ -211,10 +211,14 @@ async function replaceFirstMessage(messages, searchTerm, replacement, channel) {
             continue;
         }
 
+        // Extract entities first so they are never visible to the search or
+        // replacement step — even if the search term appears inside an entity ID.
         const { cleansed: withoutEntities, entities } = extractDiscordEntities(
-            stripMarkdown(normalizeUnicode(msg.content))
+            normalizeUnicode(msg.content)
         );
-        const { cleansed, urls } = extractUrls(withoutEntities);
+        // Strip markdown on the entity-free string; URLs are extracted after
+        // stripMarkdown has reinserted them, protecting them during replacement.
+        const { cleansed, urls } = extractUrls(stripMarkdown(withoutEntities));
 
         if (!cleansed.toLocaleLowerCase().includes(lowerSearch)) {
             console.debug(`No match in "${msg.content}" for "${searchTerm}"`);

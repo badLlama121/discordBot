@@ -248,6 +248,26 @@ describe('replaceFirstMessage', () => {
         expect(channel.send).not.toHaveBeenCalled();
     });
 
+    it('does not replace inside user mention IDs', async () => {
+        // <@416708751500902411> contains "50" at positions 9–10; message must be skipped.
+        const msgs = [{ content: 'she\'s in <@416708751500902411> territory', author }];
+        const { search, replacement } = splitReplaceCommand('!s 50/not great looking. 3/10');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).not.toHaveBeenCalled();
+    });
+
+    it('does not corrupt user mention IDs when the search term also appears in the entity ID', async () => {
+        // Regression: entity was extracted after stripMarkdown reinserted it, leaving a window
+        // where a search term matching inside the entity ID could corrupt it.
+        // The plain-text "50" should be replaced; the "50" inside the entity ID must not be.
+        const msgs = [{ content: 'she scored 50 in <@416708751500902411> territory', author }];
+        const { search, replacement } = splitReplaceCommand('!s 50/not great looking. 3/10');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).toHaveBeenCalledWith(
+            'author she scored **not great looking. 3/10** in <@416708751500902411> territory'
+        );
+    });
+
     it('does not match placeholder text when searching for "url"', async () => {
         // Regression: PUA placeholder must be immune to searches containing its text.
         const msgs = [{ content: 'check https://example.com', author }];
