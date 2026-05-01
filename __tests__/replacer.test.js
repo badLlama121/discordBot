@@ -93,13 +93,20 @@ describe('extractUrls', () => {
 
 describe('extractDiscordEntities', () => {
     it.each([
-        ['animated emoji',   '<a:aniblobsweat:488851906022825677>'],
-        ['static emoji',     '<:smile:123456789>'],
-        ['user mention',     '<@416708751500902411>'],
-        ['nickname mention', '<@!416708751500902411>'],
-        ['role mention',     '<@&987654321098765432>'],
-        ['channel mention',  '<#123456789012345678>'],
-        ['timestamp',        '<t:1745884800:R>'],
+        ['animated emoji',        '<a:aniblobsweat:488851906022825677>'],
+        ['static emoji',          '<:smile:123456789>'],
+        ['user mention',          '<@416708751500902411>'],
+        ['nickname mention',      '<@!416708751500902411>'],
+        ['role mention',          '<@&987654321098765432>'],
+        ['channel mention',       '<#123456789012345678>'],
+        ['timestamp',             '<t:1745884800:R>'],
+        ['slash command',         '</ping:1234567890123456789>'],
+        ['slash subcommand',      '</config set:1234567890123456789>'],
+        ['guild nav home',        '<id:home>'],
+        ['guild nav browse',      '<id:browse>'],
+        ['guild nav customize',   '<id:customize>'],
+        ['guild nav guide',       '<id:guide>'],
+        ['guild nav linked-roles','<id:linked-roles>'],
     ])('extracts a %s', (_, entity) => {
         const result = extractDiscordEntities(`hello ${entity} world`);
         expect(result.cleansed).toBe(`hello ${ENTITY_PLACEHOLDER} world`);
@@ -244,6 +251,21 @@ describe('replaceFirstMessage', () => {
         // The search term only exists inside entity IDs; extraction must prevent any match.
         const msgs = [{ content: 'check <@&988765432100123456> and <#123456789012345678>', author }];
         const { search, replacement } = splitReplaceCommand('!s 5/x');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).not.toHaveBeenCalled();
+    });
+
+    it('does not replace inside slash command IDs', async () => {
+        // </ping:1234567890> contains "23"; extraction must prevent any match.
+        const msgs = [{ content: 'try </ping:1234567890>', author }];
+        const { search, replacement } = splitReplaceCommand('!s 23/x');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).not.toHaveBeenCalled();
+    });
+
+    it('does not replace inside guild navigation entities', async () => {
+        const msgs = [{ content: 'see <id:browse> for channels', author }];
+        const { search, replacement } = splitReplaceCommand('!s browse/search');
         await replaceFirstMessage(msgs, search, replacement, channel);
         expect(channel.send).not.toHaveBeenCalled();
     });

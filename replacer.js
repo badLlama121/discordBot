@@ -10,7 +10,7 @@ const LT_PLACEHOLDER     = '\uE003'; // used only within stripMarkdown
 const GT_PLACEHOLDER     = '\uE004'; // used only within stripMarkdown
 
 // Compiled once at module load — reused on every processed message.
-const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?)>/gi;
+const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?|\/[a-zA-Z0-9_\- ]+:[0-9]+|id:(?:home|browse|customize|guide|linked-roles))>/gi;
 const URL_RE    = /(https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?/gi;
 
 // Pre-compiled blocked-phrase patterns — normalised to strip diacritics so that
