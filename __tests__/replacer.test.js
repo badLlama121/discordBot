@@ -1,7 +1,7 @@
 jest.mock('../config');
 const config = require('../config');
 config.getConfig.mockReturnValue({
-    SearchPhrasesToBlock: ['boogers', 'dong']
+    SearchPhrasesToBlock: ['boogers', 'dong', 'don\'t']
 });
 const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractDiscordEntities, URL_PLACEHOLDER, ENTITY_PLACEHOLDER } = require('../replacer');
 
@@ -58,6 +58,11 @@ describe('splitReplaceCommand', () => {
 
     it('flags a blocked replacement term', () => {
         expect(splitReplaceCommand('!s x/dong').isBlockedPhrase).toBe(true);
+    });
+
+    it('flags a blocked replacement term containing a curly apostrophe', () => {
+        // "don\u2019t" normalizes to "don't" which is blocked
+        expect(splitReplaceCommand('!s x/don\u2019t').isBlockedPhrase).toBe(true);
     });
 
     it('does not flag an unblocked command', () => {

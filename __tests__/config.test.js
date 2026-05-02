@@ -81,6 +81,12 @@ describe('config module', () => {
         }
     );
 
+    it('SearchPhrasesToBlock trims whitespace from each entry', () => {
+        process.env.SEARCH_PHRASES_TO_BLOCK = 'foo, bar , baz';
+        const config = require('../config').getConfig();
+        expect(config.SearchPhrasesToBlock).toEqual(['foo', 'bar', 'baz']);
+    });
+
     it('Token is read directly from the TOKEN env var', () => {
         process.env.TOKEN = 'test-token-abc123';
         const config = require('../config').getConfig();

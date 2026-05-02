@@ -66,7 +66,7 @@ describe('reactions', () => {
             registerProxyMessage('bot-msg-1', 'cmd-issuer');
             // reactor reacts to the bot's message; credit should go to cmd-issuer, not the bot
             recordReaction({ message: { id: 'bot-msg-1', author: { id: 'bot' } }, emoji: thumbsUp }, { id: 'reactor1' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@cmd-issuer> (1)');
+            expect(getLeaderboard('👍', '👍')).toContain('<@cmd-issuer> 1');
         });
 
         it('does not credit the !s issuer for their own reaction to the bot reply', () => {
@@ -81,7 +81,7 @@ describe('reactions', () => {
         it('records a reaction and reflects it in the leaderboard', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> (1)');
+            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
         });
 
         it('ignores self-reactions', () => {
@@ -94,7 +94,7 @@ describe('reactions', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' }); // duplicate
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> (1)');
+            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
         });
 
         it('counts multiple reactions on different messages toward the same author', () => {
@@ -102,15 +102,15 @@ describe('reactions', () => {
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
             recordReaction(makeReaction('m2', 'author1'), { id: 'reactor2' });
             recordReaction(makeReaction('m3', 'author1'), { id: 'reactor3' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> (3)');
+            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 3');
         });
 
         it('does not cross-contaminate different emoji', () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' }); // 👍
             recordReaction(makeReaction('m2', 'author1', { name: '❤️', id: null }), { id: 'reactor2' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> (1)');
-            expect(getLeaderboard('❤️', '❤️')).toContain('<@author1> (1)');
+            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
+            expect(getLeaderboard('❤️', '❤️')).toContain('<@author1> 1');
         });
     });
 
@@ -149,8 +149,8 @@ describe('reactions', () => {
             recordReaction(makeReaction('m4', 'author1'), { id: 'r4' });
 
             const result = getLeaderboard('👍', '👍');
-            expect(result).toContain('<@author2> (3)');
-            expect(result).toContain('<@author1> (1)');
+            expect(result).toContain('<@author2> 3');
+            expect(result).toContain('<@author1> 1');
             expect(result.indexOf('<@author2>')).toBeLessThan(result.indexOf('<@author1>'));
         });
 
@@ -171,7 +171,7 @@ describe('reactions', () => {
                 recordReaction(makeReaction(`m${i}`, authorId), { id: `r${i}` });
             });
             const result = getLeaderboard('👍', '👍', 3);
-            expect(result.split('\n')).toHaveLength(4); // header + 3 entries
+            expect(result.match(/<@/g)).toHaveLength(3);
         });
     });
 });
