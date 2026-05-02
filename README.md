@@ -1,20 +1,34 @@
-# KIRBot - Keepin it real since 2023
+# KIRBot — Keepin it real since 2023
 
-## Local Development Setup
+A Discord bot for quote-editing messages and tracking karma-style scores for
+phrases and people.
 
-- Node.js https://nodejs.org/en/download
-- `npm install -g discord.js dotenv`
-- Clone this repo
-- `npm ci`
-- Create .env file and get token from steel
-```sh
-ALLOW_CONFIG_DUMP=true
-TOKEN='[INSERT TOKEN HERE]'
-``````
-- run `npm start` command from development directory, and should start local instance and dev bot should respond to commands
+## Local Development
 
-### Push to prod
-- Give me github deets so I can add you as a contributor
-    - Alternatively send the code and ill add it myself
-- Commit/push changes to github repo
-- Ping steel to push to prod bot server (better process inbound)
+1. Install [Node.js](https://nodejs.org/en/download)
+2. Clone this repo and install dependencies:
+   ```sh
+   npm ci
+   ```
+3. Create a `.env` file in the project root:
+   ```sh
+   TOKEN=your_discord_bot_token_here
+   ALLOW_CONFIG_DUMP=true
+   DREAD_INACTIVITY_HOURS=0.01  # optional: set low to test the existential dread feature
+   ```
+4. Start the bot (auto-restarts on file changes):
+   ```sh
+   npm start
+   ```
+5. Run the test suite:
+   ```sh
+   npm test
+   ```
+
+See `CLAUDE.md` for a full description of commands, architecture, and
+environment variables.
+
+## Contributing
+
+- Open a PR against `main`
+- Ping steel to deploy to the prod bot server

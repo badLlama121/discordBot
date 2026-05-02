@@ -1,78 +1,96 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore, getTrending } = require('./scoring');
+const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand, registerProxyMessage } = require('./reactions');
 const { oneBlockedMessage } = require('./one-blocked-message');
+const { recordActivity } = require('./dread');
 
-/**
- * Gets the config but cleans out any values that should be secret.
- */
-const getCleansedConfig = () => ({ ... config, Token: undefined });
+const getCleansedConfig = () => ({ ...config, Token: undefined });
 
-
-const client = new Client({ 
+const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.MessageContent,
-    ] 
+    ],
+    // Partials are required to receive reactions on messages the bot did not
+    // see when it started (i.e. messages not in the client's cache).
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag} — ready.`);
 });
 
-client.on('messageCreate', async (initialQuery) => {
-    if (initialQuery.author.bot) return;
-  
-    if ( config.AllowConfigDump === true &&  initialQuery.content.indexOf('!configDump') === 0) {
-        initialQuery.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}}\n\`\`\``);
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    await recordActivity(message.channel);
+
+    if (config.AllowConfigDump === true && message.content.startsWith('!configDump')) {
+        message.channel.send(`Config: \`\`\`json\n${JSON.stringify(getCleansedConfig(), null, 2)}\n\`\`\``);
     }
-    else if (initialQuery.content.indexOf('!s ') == 0) {
-        console.log('Quoting user ' + initialQuery.author.username);
+    else if (message.content.startsWith('!s ')) {
+        console.log(`Quoting user ${message.author.username}`);
 
-        if (oneBlockedMessage(initialQuery)) {
-            return;
-        }
-        
-        let channel = initialQuery.channel;
-        // TODO: we need to encapsulate all thse calls to replacer functions in another module because SOLID        
-        const messages = await channel.messages.fetch({ limit: config.MessageFetchCount});
-        const splitMessage = splitReplaceCommand(initialQuery.content);
-        if(!splitMessage.isBlockedPhrase) {
-            const failedToFind = replaceFirstMessage(messages, splitMessage.search, splitMessage.replacement, channel);
-            if(failedToFind) {
-                initialQuery.channel.send(initialQuery.author.toString() + ' nobody said that, dumb ass');
+        if (oneBlockedMessage(message)) return;
+
+        const cmd = splitReplaceCommand(message.content);
+        if (!cmd.isBlockedPhrase) {
+            const channel = message.channel;
+            const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
+            const sentMsg = await replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
+            if (!sentMsg) {
+                channel.send(`${message.author} nobody said that, dumb ass`);
+            } else {
+                registerProxyMessage(sentMsg.id, message.author.id);
             }
         }
     }
-    else if (initialQuery.content.indexOf('!trending') === 0)
-    {
-        initialQuery.channel.send(getTrending(5));
-    }
-    else if (initialQuery.content.indexOf('!score ') == 0)
-    { 
-        if (oneBlockedMessage(initialQuery)) {
-            return;
+    else if (message.content.startsWith('!leader')) {
+        const parsed = parseLeaderCommand(message.content);
+        if (!parsed) {
+            message.channel.send('Usage: !leader <emoji>');
+        } else {
+            message.channel.send(getLeaderboard(parsed.key, parsed.display));
         }
-
-        const phrase = initialQuery.content.replace(/^!score/, '').trim();
-        getScore(phrase, score => {
-            initialQuery.channel.send(`Score *${phrase}*: ${score}`);
-        });
     }
-    else
-    {
-        processScores(initialQuery);
+    else if (message.content.startsWith('!trending')) {
+        message.channel.send(getTrending(5));
+    }
+    else if (message.content.startsWith('!score ')) {
+        if (oneBlockedMessage(message)) return;
+
+        const phrase = message.content.slice('!score '.length).trim();
+        message.channel.send(`Score *${phrase}*: ${getScore(phrase)}`);
+    }
+    else {
+        processScores(message);
     }
 });
 
+// Resolves any partial objects before delegating to the reaction handler.
+// messageReactionAdd also fetches the message (needed for author_id); Remove
+// only needs the reaction itself, since we only use message.id at that point.
+async function withResolvedReaction(reaction, user, { fetchMessage = false, handler }) {
+    if (user.bot) return;
+    await recordActivity(reaction.message.channel);
+    try {
+        if (reaction.partial) await reaction.fetch();
+        if (fetchMessage && reaction.message.partial) await reaction.message.fetch();
+    } catch (err) {
+        console.error('Failed to fetch partial reaction or message:', err);
+        return;
+    }
+    handler(reaction, user);
+}
+
+client.on('messageReactionAdd',    (r, u) => withResolvedReaction(r, u, { fetchMessage: true,  handler: recordReaction }));
+client.on('messageReactionRemove', (r, u) => withResolvedReaction(r, u, { fetchMessage: false, handler: removeReaction }));
 
 if (config.Token) {
-    client.once('ready', () => {
-        console.log('Ready!');
-    });
     client.login(config.Token);
 } else {
-    console.error('Set a token dumb ass!!');
+    console.error('No TOKEN set — add it to your .env file.');
 }
