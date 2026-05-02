@@ -247,7 +247,7 @@ function splitReplaceCommand(command) {
     const body = command.replace(/^!s /, '');
     const slash = body.indexOf('/');
     const search = normalizeUnicode(slash === -1 ? body : body.slice(0, slash));
-    const replacement = slash === -1 ? undefined : body.slice(slash + 1);
+    const replacement = slash === -1 ? undefined : normalizeUnicode(body.slice(slash + 1));
 
     return {
         search,

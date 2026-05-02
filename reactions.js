@@ -71,8 +71,9 @@ function parseLeaderCommand(content) {
 }
 
 // Maps bot message IDs to the user ID who should receive reaction credit.
-// Populated by registerProxyMessage when the bot sends a !s reply on behalf
-// of the command issuer.
+// Capped at 1000 entries (FIFO) — the oldest entry is evicted when the cap is
+// hit, since stale proxy mappings for long-past messages are never useful.
+const PROXY_AUTHORS_MAX = 1000;
 const proxyAuthors = new Map();
 
 /**
@@ -84,6 +85,8 @@ const proxyAuthors = new Map();
  * @param {string} authorId
  */
 function registerProxyMessage(messageId, authorId) {
+    if (proxyAuthors.size >= PROXY_AUTHORS_MAX)
+        proxyAuthors.delete(proxyAuthors.keys().next().value);
     proxyAuthors.set(messageId, authorId);
 }
 
