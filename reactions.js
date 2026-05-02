@@ -137,10 +137,8 @@ function getLeaderboard(key, display, limit = 5) {
 
     if (rows.length === 0) return `Who is one ${display} message`;
 
-    return [
-        `${display} leaderboard (last 30 days):`,
-        ...rows.map((r, i) => `${i + 1}. <@${r.author_id}> (${r.total})`),
-    ].join('\n');
+    const entries = rows.map((r, i) => `${i + 1}. <@${r.author_id}> ${r.total}`).join(', ');
+    return `**${display} (30d)** ${entries}`;
 }
 
 module.exports = { toEmojiKey, parseLeaderCommand, registerProxyMessage, recordReaction, removeReaction, getLeaderboard };
