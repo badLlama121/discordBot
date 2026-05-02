@@ -1,7 +1,7 @@
 jest.mock('../config');
 const config = require('../config');
 config.getConfig.mockReturnValue({
-    SearchPhrasesToBlock: ['boogers', 'dong', "don't"]
+    SearchPhrasesToBlock: ['boogers', 'dong', 'don\'t']
 });
 const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractDiscordEntities, URL_PLACEHOLDER, ENTITY_PLACEHOLDER } = require('../replacer');
 
