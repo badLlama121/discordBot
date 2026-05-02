@@ -1,4 +1,5 @@
 const { getDatabase } = require('./db');
+const { normalizeUnicode } = require('./replacer');
 
 const db = getDatabase();
 
@@ -38,7 +39,7 @@ const trendingStmt = db.prepare(`
  * @returns {number}
  */
 function getScore(phrase) {
-    return getScoreStmt.get(phrase).total;
+    return getScoreStmt.get(normalizeUnicode(phrase)).total;
 }
 
 /**
@@ -76,7 +77,7 @@ function processScores(message) {
     const author = message.author?.toString();
     for (const line of message.content.split(/[\r\n]+/)) {
         const scored = parseScoreLine(line);
-        if (scored) insertStmt.run(Date.now(), message.content, author, scored.phrase, scored.score);
+        if (scored) insertStmt.run(Date.now(), message.content, author, normalizeUnicode(scored.phrase), scored.score);
     }
 }
 

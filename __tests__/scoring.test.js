@@ -22,6 +22,19 @@ describe('scoring', () => {
             expect(getScore('poly')).toBe(-1);
         });
 
+        it('normalizes smart apostrophes in phrases before storage and lookup', () => {
+            const { processScores, getScore } = require('../scoring');
+            processScores({ content: 'it\u2019s++' }); // right single quotation mark
+            expect(getScore("it's")).toBe(1);
+            expect(getScore('it\u2019s')).toBe(1);
+        });
+
+        it('normalizes em dash to -- in phrases', () => {
+            const { processScores, getScore } = require('../scoring');
+            processScores({ content: 'foo\u2014bar++' });
+            expect(getScore('foo--bar')).toBe(1);
+        });
+
         it('does not record a score for a bare ++ or -- with no phrase', () => {
             const { processScores, getTrending } = require('../scoring');
             ['++', '--', '  ++', '\u2014'].forEach(line => processScores({ content: line }));

@@ -168,6 +168,27 @@ describe('replaceFirstMessage', () => {
         expect(channel.send).toHaveBeenCalledWith('author I don\'t like **hurkle durkle**');
     });
 
+    it('treats an em dash in a message as -- when searching', async () => {
+        const msgs = [{ content: 'foo\u2014bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo--bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats an em dash in a search term as -- when matching', async () => {
+        const msgs = [{ content: 'foo--bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo\u2014bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats a modifier-letter apostrophe (\u02BC) the same as a regular apostrophe', async () => {
+        const msgs = [{ content: 'it\u02BCs great', author }];
+        const { search, replacement } = splitReplaceCommand("!s it's great/lovely");
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **lovely**');
+    });
+
     it('strips markdown formatting before matching and restores entities in output', async () => {
         expect(await replaceFirstMessage(messages, 'an attic', 'hobbit hole', channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author <@416708751500902411>  lives in **hobbit hole** not a condo');

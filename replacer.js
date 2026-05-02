@@ -25,10 +25,10 @@ const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
 
 // Single-pass Unicode normalizer: one compiled regex, one lookup table.
 // Adding a new mapping means one new line in the Map — the function never changes.
-const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u2026\u2013\u2014]/g;
+const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u201B\u02BC\u2026\u2013\u2014]/g;
 const UNICODE_NORM_MAP = new Map([
     ['\u201C', '"'], ['\u201D', '"'],
-    ['\u2018', '\''], ['\u2019', '\''],
+    ['\u2018', '\''], ['\u2019', '\''], ['\u201B', '\''], ['\u02BC', '\''],
     ['\u2026', '...'],
     ['\u2013', '-'],
     ['\u2014', '--'],
