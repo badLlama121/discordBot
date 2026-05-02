@@ -15,6 +15,7 @@ describe('config module', () => {
         expect(config).toEqual({
             AllowConfigDump: false,
             DisableOneBlockedMessage: false,
+            DreadInactivityMs: 7200000,
             MessageFetchCount: 50,
             OneBlockedPercent: 1,
             RealestOneBlockedPercent: 5,
