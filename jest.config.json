@@ -4,7 +4,8 @@
         "!**/node_modules/**",
         "!**/vendor/**",
         "!./coverage/**",
-        "!./index.js"
+        "!./index.js",
+        "!./dread.js"
       ],
       "clearMocks": true,
       "resetMocks": true,
