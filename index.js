@@ -40,7 +40,7 @@ client.on('messageCreate', async (message) => {
         if (!cmd.isBlockedPhrase) {
             const channel = message.channel;
             const history = await channel.messages.fetch({ limit: config.MessageFetchCount });
-            const sentMsg = await replaceFirstMessage(history, cmd.search, cmd.replacement, channel);
+            const sentMsg = await replaceFirstMessage(history.values(), cmd.search, cmd.replacement, channel);
             if (!sentMsg) {
                 channel.send(`${message.author} nobody said that, dumb ass`);
             } else {
