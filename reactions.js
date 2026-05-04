@@ -61,7 +61,7 @@ function toEmojiKey(emoji) {
  * @returns {{ key: string, display: string } | null}
  */
 function parseLeaderCommand(content) {
-    const body = content.slice('!leader '.length).trim();
+    const body = content.slice('!leader'.length).trim();
     if (!body) return null;
     const match = body.match(/^<a?:([^:]+):(\d+)>$/);
     return {

@@ -42,6 +42,13 @@ describe('reactions', () => {
             });
         });
 
+        it('parses a custom emoji with no space after !leader', () => {
+            const { parseLeaderCommand } = require('../reactions');
+            expect(parseLeaderCommand('!leader<:kirby:123456789>')).toEqual({
+                key: 'kirby:123456789', display: '<:kirby:123456789>'
+            });
+        });
+
         it('parses an animated custom emoji', () => {
             const { parseLeaderCommand } = require('../reactions');
             expect(parseLeaderCommand('!leader <a:dance:987654321>')).toEqual({
