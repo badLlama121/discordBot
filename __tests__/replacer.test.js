@@ -1,7 +1,7 @@
 jest.mock('../config');
 const config = require('../config');
 config.getConfig.mockReturnValue({
-    SearchPhrasesToBlock: ['boogers', 'dong']
+    SearchPhrasesToBlock: ['boogers', 'dong', 'don\'t']
 });
 const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractDiscordEntities, URL_PLACEHOLDER, ENTITY_PLACEHOLDER } = require('../replacer');
 
@@ -58,6 +58,11 @@ describe('splitReplaceCommand', () => {
 
     it('flags a blocked replacement term', () => {
         expect(splitReplaceCommand('!s x/dong').isBlockedPhrase).toBe(true);
+    });
+
+    it('flags a blocked replacement term containing a curly apostrophe', () => {
+        // "don\u2019t" normalizes to "don't" which is blocked
+        expect(splitReplaceCommand('!s x/don\u2019t').isBlockedPhrase).toBe(true);
     });
 
     it('does not flag an unblocked command', () => {
@@ -161,6 +166,27 @@ describe('replaceFirstMessage', () => {
         const { search, replacement } = splitReplaceCommand('!s "find and replace dumb"/hurkle durkle');
         expect(await replaceFirstMessage(messages, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author I don\'t like **hurkle durkle**');
+    });
+
+    it('treats an em dash in a message as -- when searching', async () => {
+        const msgs = [{ content: 'foo\u2014bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo--bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats an em dash in a search term as -- when matching', async () => {
+        const msgs = [{ content: 'foo--bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo\u2014bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats a modifier-letter apostrophe (\u02BC) the same as a regular apostrophe', async () => {
+        const msgs = [{ content: 'it\u02BCs great', author }];
+        const { search, replacement } = splitReplaceCommand("!s it's great/lovely");
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **lovely**');
     });
 
     it('strips markdown formatting before matching and restores entities in output', async () => {

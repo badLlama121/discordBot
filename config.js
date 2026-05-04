@@ -5,7 +5,7 @@ const getConfig = () => {
     const oneBlockedPercent = Number.parseFloat(process.env.ONE_BLOCKED_PERCENT);
     const realestOneBlockedPercent = Number.parseFloat(process.env.REALEST_ONE_BLOCKED_PERCENT);
     const dreadInactivityHours = Number.parseFloat(process.env.DREAD_INACTIVITY_HOURS);
-    const searchPhrasesToBlock = (process.env.SEARCH_PHRASES_TO_BLOCK ?? '').split(',').filter(phrase => phrase.trim() !== '');
+    const searchPhrasesToBlock = (process.env.SEARCH_PHRASES_TO_BLOCK ?? '').split(',').map(p => p.trim()).filter(p => p !== '');
 
     return {
         /** Enables the !configDump command when true. */

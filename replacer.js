@@ -25,10 +25,10 @@ const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
 
 // Single-pass Unicode normalizer: one compiled regex, one lookup table.
 // Adding a new mapping means one new line in the Map — the function never changes.
-const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u2026\u2013\u2014]/g;
+const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u201B\u02BC\u2026\u2013\u2014]/g;
 const UNICODE_NORM_MAP = new Map([
     ['\u201C', '"'], ['\u201D', '"'],
-    ['\u2018', '\''], ['\u2019', '\''],
+    ['\u2018', '\''], ['\u2019', '\''], ['\u201B', '\''], ['\u02BC', '\''],
     ['\u2026', '...'],
     ['\u2013', '-'],
     ['\u2014', '--'],
@@ -247,7 +247,7 @@ function splitReplaceCommand(command) {
     const body = command.replace(/^!s /, '');
     const slash = body.indexOf('/');
     const search = normalizeUnicode(slash === -1 ? body : body.slice(0, slash));
-    const replacement = slash === -1 ? undefined : body.slice(slash + 1);
+    const replacement = slash === -1 ? undefined : normalizeUnicode(body.slice(slash + 1));
 
     return {
         search,
