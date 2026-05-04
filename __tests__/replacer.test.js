@@ -184,7 +184,7 @@ describe('replaceFirstMessage', () => {
 
     it('treats a modifier-letter apostrophe (\u02BC) the same as a regular apostrophe', async () => {
         const msgs = [{ content: 'it\u02BCs great', author }];
-        const { search, replacement } = splitReplaceCommand("!s it's great/lovely");
+        const { search, replacement } = splitReplaceCommand('!s it\'s great/lovely');
         expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author **lovely**');
     });
