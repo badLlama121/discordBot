@@ -11,7 +11,7 @@ const GT_PLACEHOLDER     = '\uE004'; // used only within stripMarkdown
 
 // Compiled once at module load — reused on every processed message.
 const ENTITY_RE = /<(?:a?:[a-zA-Z0-9_]+:[0-9]+|@[!&]?[0-9]+|#[0-9]+|t:[0-9]+(?::[tTdDfFR])?|\/[a-zA-Z0-9_\- ]+:[0-9]+|id:(?:home|browse|customize|guide|linked-roles))>/gi;
-const URL_RE    = /(https?:\/\/)?[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?/gi;
+const URL_RE    = /https?:\/\/[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?/gi;
 
 // Pre-compiled blocked-phrase patterns — normalised to strip diacritics so that
 // accent variants of a blocked word are caught without special-casing each one.
@@ -25,10 +25,10 @@ const BLOCKED_PHRASE_RES = config.SearchPhrasesToBlock.map(p =>
 
 // Single-pass Unicode normalizer: one compiled regex, one lookup table.
 // Adding a new mapping means one new line in the Map — the function never changes.
-const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u2026\u2013\u2014]/g;
+const UNICODE_NORM_RE  = /[\u201C\u201D\u2018\u2019\u201B\u02BC\u2026\u2013\u2014]/g;
 const UNICODE_NORM_MAP = new Map([
     ['\u201C', '"'], ['\u201D', '"'],
-    ['\u2018', '\''], ['\u2019', '\''],
+    ['\u2018', '\''], ['\u2019', '\''], ['\u201B', '\''], ['\u02BC', '\''],
     ['\u2026', '...'],
     ['\u2013', '-'],
     ['\u2014', '--'],
@@ -72,8 +72,8 @@ function extractDiscordEntities(str) {
 
 /**
  * Extracts all URLs from `str`, replacing each with `URL_PLACEHOLDER`.
- * Requires a proper alphabetic TLD (≥ 2 letters) to avoid false-positives on
- * version strings (v1.2.3), prices (5.00), and other dot-separated numbers.
+ * Requires an explicit `http://` or `https://` protocol — bare-domain mentions
+ * (e.g. `fast.com`) are treated as ordinary text so `!s` can rewrite them.
  *
  * @param {string} str
  * @returns {{ cleansed: string, urls: string[] | null }}
@@ -247,7 +247,7 @@ function splitReplaceCommand(command) {
     const body = command.replace(/^!s /, '');
     const slash = body.indexOf('/');
     const search = normalizeUnicode(slash === -1 ? body : body.slice(0, slash));
-    const replacement = slash === -1 ? undefined : body.slice(slash + 1);
+    const replacement = slash === -1 ? undefined : normalizeUnicode(body.slice(slash + 1));
 
     return {
         search,

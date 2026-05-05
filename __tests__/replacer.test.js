@@ -1,7 +1,7 @@
 jest.mock('../config');
 const config = require('../config');
 config.getConfig.mockReturnValue({
-    SearchPhrasesToBlock: ['boogers', 'dong']
+    SearchPhrasesToBlock: ['boogers', 'dong', 'don\'t']
 });
 const { replaceFirstMessage, splitReplaceCommand, extractUrls, extractDiscordEntities, URL_PLACEHOLDER, ENTITY_PLACEHOLDER } = require('../replacer');
 
@@ -60,6 +60,11 @@ describe('splitReplaceCommand', () => {
         expect(splitReplaceCommand('!s x/dong').isBlockedPhrase).toBe(true);
     });
 
+    it('flags a blocked replacement term containing a curly apostrophe', () => {
+        // "don\u2019t" normalizes to "don't" which is blocked
+        expect(splitReplaceCommand('!s x/don\u2019t').isBlockedPhrase).toBe(true);
+    });
+
     it('does not flag an unblocked command', () => {
         expect(splitReplaceCommand('!s oo/aa').isBlockedPhrase).toBe(false);
     });
@@ -79,9 +84,11 @@ describe('extractUrls', () => {
     });
 
     it.each([
-        ['price',   'I paid 5.00 for it'],
-        ['version', 'released v1.2.3 today'],
-        ['decimal', 'pi is 3.14'],
+        ['price',        'I paid 5.00 for it'],
+        ['version',      'released v1.2.3 today'],
+        ['decimal',      'pi is 3.14'],
+        ['bare domain',  'hit fast.com'],
+        ['bare subdomain', 'go to www.example.com'],
     ])('does not extract a %s as a URL', (_, input) => {
         expect(extractUrls(input)).toEqual({ cleansed: input, urls: null });
     });
@@ -163,6 +170,27 @@ describe('replaceFirstMessage', () => {
         expect(channel.send).toHaveBeenCalledWith('author I don\'t like **hurkle durkle**');
     });
 
+    it('treats an em dash in a message as -- when searching', async () => {
+        const msgs = [{ content: 'foo\u2014bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo--bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats an em dash in a search term as -- when matching', async () => {
+        const msgs = [{ content: 'foo--bar', author }];
+        const { search, replacement } = splitReplaceCommand('!s foo\u2014bar/baz');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **baz**');
+    });
+
+    it('treats a modifier-letter apostrophe (\u02BC) the same as a regular apostrophe', async () => {
+        const msgs = [{ content: 'it\u02BCs great', author }];
+        const { search, replacement } = splitReplaceCommand('!s it\'s great/lovely');
+        expect(await replaceFirstMessage(msgs, search, replacement, channel)).not.toBeNull();
+        expect(channel.send).toHaveBeenCalledWith('author **lovely**');
+    });
+
     it('strips markdown formatting before matching and restores entities in output', async () => {
         expect(await replaceFirstMessage(messages, 'an attic', 'hobbit hole', channel)).not.toBeNull();
         expect(channel.send).toHaveBeenCalledWith('author <@416708751500902411>  lives in **hobbit hole** not a condo');
@@ -222,6 +250,13 @@ describe('replaceFirstMessage', () => {
         expect(channel.send).toHaveBeenCalledWith(
             'author **aa** https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz **aa**'
         );
+    });
+
+    it('rewrites a bare-domain mention without an http(s):// protocol', async () => {
+        const msgs = [{ content: 'hit fast.com', author }];
+        const { search, replacement } = splitReplaceCommand('!s ast/uck');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).toHaveBeenCalledWith('author hit f**uck**.com');
     });
 
     it('skips messages where the search term appears only within a URL', async () => {

@@ -1,4 +1,5 @@
 const { getDatabase } = require('./db');
+const { normalizeUnicode } = require('./replacer');
 
 const db = getDatabase();
 
@@ -38,7 +39,7 @@ const trendingStmt = db.prepare(`
  * @returns {number}
  */
 function getScore(phrase) {
-    return getScoreStmt.get(phrase).total;
+    return getScoreStmt.get(normalizeUnicode(phrase)).total;
 }
 
 /**
@@ -53,13 +54,17 @@ function getScore(phrase) {
  * @returns {{ score: number, phrase: string } | null}
  */
 function parseScoreLine(line) {
-    if (line.endsWith('++'))
-        return { score: 1, phrase: line.replace(/\s*\++$/, '') };
+    if (line.endsWith('++')) {
+        const phrase = line.replace(/\s*\++$/, '');
+        return phrase ? { score: 1, phrase } : null;
+    }
     const sparkle = SPARKLE_RE.exec(line);
-    if (sparkle)
+    if (sparkle && sparkle[1])
         return { score: 1, phrase: sparkle[1] };
-    if (['--', '–', '—'].some(s => line.endsWith(s)))
-        return { score: -1, phrase: line.replace(/\s*[-–—]+$/, '') };
+    if (['--', '–', '—'].some(s => line.endsWith(s))) {
+        const phrase = line.replace(/\s*[-–—]+$/, '');
+        return phrase ? { score: -1, phrase } : null;
+    }
     return null;
 }
 
@@ -72,7 +77,7 @@ function processScores(message) {
     const author = message.author?.toString();
     for (const line of message.content.split(/[\r\n]+/)) {
         const scored = parseScoreLine(line);
-        if (scored) insertStmt.run(Date.now(), message.content, author, scored.phrase, scored.score);
+        if (scored) insertStmt.run(Date.now(), message.content, author, normalizeUnicode(scored.phrase), scored.score);
     }
 }
 
