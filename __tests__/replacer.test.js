@@ -84,9 +84,11 @@ describe('extractUrls', () => {
     });
 
     it.each([
-        ['price',   'I paid 5.00 for it'],
-        ['version', 'released v1.2.3 today'],
-        ['decimal', 'pi is 3.14'],
+        ['price',        'I paid 5.00 for it'],
+        ['version',      'released v1.2.3 today'],
+        ['decimal',      'pi is 3.14'],
+        ['bare domain',  'hit fast.com'],
+        ['bare subdomain', 'go to www.example.com'],
     ])('does not extract a %s as a URL', (_, input) => {
         expect(extractUrls(input)).toEqual({ cleansed: input, urls: null });
     });
@@ -248,6 +250,13 @@ describe('replaceFirstMessage', () => {
         expect(channel.send).toHaveBeenCalledWith(
             'author **aa** https://www.google.com/search?q=aaron+burr&sca_esv=575309331&sxsrf=AM9HkKngs20KZwsuZ8WffUtq81ntoB-7ww%3A1697847658021&source=hp&ei=aRkzZeaKOciGptQPoJy78Ag&iflsig=AO6bgOgAAAAAZTMnet89R6hwn_gqlPxJYlrXn89wh42m&ved=0ahUKEwim46K074WCAxVIg4kEHSDODo4Q4dUDCA0&uact=5&oq=aaron+burr&gs_lp=Egdnd3Mtd2l6IgphYXJvbiBidXJyMgsQLhiABBixAxiDATIFEAAYgAQyCxAAGIAEGLEDGIMBMhEQLhiABBjHARivARiYBRibBTIIEC4YgAQYsQMyBRAAGIAEMgUQLhiABDIFEAAYgAQyBRAAGIAEMgsQLhivARjHARiABEiJGVCoBFi8EXABeACQAQCYAVagAZQFqgECMTC4AQPIAQD4AQGoAgrCAg0QLhjHARjRAxjqAhgnwgIHECMY6gIYJ8ICDRAuGMcBGK8BGOoCGCfCAhAQABgDGI8BGOUCGOoCGIwDwgIREC4YgAQYsQMYgwEYxwEY0QPCAgsQLhiKBRixAxiDAcICDhAuGIAEGLEDGMcBGNEDwgILEAAYigUYsQMYgwHCAgsQLhiABBjHARjRA8ICCBAAGIAEGLEDwgIIEC4YsQMYgAQ&sclient=gws-wiz **aa**'
         );
+    });
+
+    it('rewrites a bare-domain mention without an http(s):// protocol', async () => {
+        const msgs = [{ content: 'hit fast.com', author }];
+        const { search, replacement } = splitReplaceCommand('!s ast/uck');
+        await replaceFirstMessage(msgs, search, replacement, channel);
+        expect(channel.send).toHaveBeenCalledWith('author hit f**uck**.com');
     });
 
     it('skips messages where the search term appears only within a URL', async () => {
