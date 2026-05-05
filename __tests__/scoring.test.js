@@ -25,7 +25,7 @@ describe('scoring', () => {
         it('normalizes smart apostrophes in phrases before storage and lookup', () => {
             const { processScores, getScore } = require('../scoring');
             processScores({ content: 'it\u2019s++' }); // right single quotation mark
-            expect(getScore("it's")).toBe(1);
+            expect(getScore('it\'s')).toBe(1);
             expect(getScore('it\u2019s')).toBe(1);
         });
 
