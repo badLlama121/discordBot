@@ -8,6 +8,9 @@ describe('reactions', () => {
         message: { id: messageId, author: { id: authorId } },
         emoji,
     });
+    // Identity resolver — production passes a guild-display-name lookup; tests
+    // assert on raw IDs so the format checks stay simple.
+    const idAsName = (id) => id;
 
     // ---------------------------------------------------------------------------
     // toEmojiKey
@@ -68,65 +71,65 @@ describe('reactions', () => {
     // ---------------------------------------------------------------------------
 
     describe('registerProxyMessage', () => {
-        it('credits the proxy author (the !s issuer) when someone reacts to a bot reply', () => {
+        it('credits the proxy author (the !s issuer) when someone reacts to a bot reply', async () => {
             const { registerProxyMessage, recordReaction, getLeaderboard } = require('../reactions');
             registerProxyMessage('bot-msg-1', 'cmd-issuer');
             // reactor reacts to the bot's message; credit should go to cmd-issuer, not the bot
             recordReaction({ message: { id: 'bot-msg-1', author: { id: 'bot' } }, emoji: thumbsUp }, { id: 'reactor1' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@cmd-issuer> 1');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toContain('cmd-issuer 1');
         });
 
-        it('does not credit the !s issuer for their own reaction to the bot reply', () => {
+        it('does not credit the !s issuer for their own reaction to the bot reply', async () => {
             const { registerProxyMessage, recordReaction, getLeaderboard } = require('../reactions');
             registerProxyMessage('bot-msg-1', 'cmd-issuer');
             recordReaction({ message: { id: 'bot-msg-1', author: { id: 'bot' } }, emoji: thumbsUp }, { id: 'cmd-issuer' });
-            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toBe('Who is one 👍 message');
         });
     });
 
     describe('recordReaction', () => {
-        it('records a reaction and reflects it in the leaderboard', () => {
+        it('records a reaction and reflects it in the leaderboard', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toContain('author1 1');
         });
 
-        it('ignores self-reactions', () => {
+        it('ignores self-reactions', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'author1' });
-            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toBe('Who is one 👍 message');
         });
 
-        it('ignores duplicate adds for the same (message, user, emoji)', () => {
+        it('ignores duplicate adds for the same (message, user, emoji)', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' }); // duplicate
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toContain('author1 1');
         });
 
-        it('counts multiple reactions on different messages toward the same author', () => {
+        it('counts multiple reactions on different messages toward the same author', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
             recordReaction(makeReaction('m2', 'author1'), { id: 'reactor2' });
             recordReaction(makeReaction('m3', 'author1'), { id: 'reactor3' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 3');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toContain('author1 3');
         });
 
-        it('does not cross-contaminate different emoji', () => {
+        it('does not cross-contaminate different emoji', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' }); // 👍
             recordReaction(makeReaction('m2', 'author1', { name: '❤️', id: null }), { id: 'reactor2' });
-            expect(getLeaderboard('👍', '👍')).toContain('<@author1> 1');
-            expect(getLeaderboard('❤️', '❤️')).toContain('<@author1> 1');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toContain('author1 1');
+            expect(await getLeaderboard('❤️', '❤️', idAsName)).toContain('author1 1');
         });
     });
 
     describe('removeReaction', () => {
-        it('removes a recorded reaction from the leaderboard', () => {
+        it('removes a recorded reaction from the leaderboard', async () => {
             const { recordReaction, removeReaction, getLeaderboard } = require('../reactions');
             recordReaction(makeReaction('m1', 'author1'), { id: 'reactor1' });
             removeReaction({ message: { id: 'm1' }, emoji: thumbsUp }, { id: 'reactor1' });
-            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toBe('Who is one 👍 message');
         });
 
         it('is idempotent — removing a non-existent reaction does not throw', () => {
@@ -142,12 +145,12 @@ describe('reactions', () => {
     // ---------------------------------------------------------------------------
 
     describe('getLeaderboard', () => {
-        it('returns the Easter-egg message when no reactions exist', () => {
+        it('returns the Easter-egg message when no reactions exist', async () => {
             const { getLeaderboard } = require('../reactions');
-            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toBe('Who is one 👍 message');
         });
 
-        it('ranks authors by total reactions received, highest first', () => {
+        it('ranks authors by total reactions received, highest first', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             // author2 gets 3, author1 gets 1
             recordReaction(makeReaction('m1', 'author2'), { id: 'r1' });
@@ -155,13 +158,29 @@ describe('reactions', () => {
             recordReaction(makeReaction('m3', 'author2'), { id: 'r3' });
             recordReaction(makeReaction('m4', 'author1'), { id: 'r4' });
 
-            const result = getLeaderboard('👍', '👍');
-            expect(result).toContain('<@author2> 3');
-            expect(result).toContain('<@author1> 1');
-            expect(result.indexOf('<@author2>')).toBeLessThan(result.indexOf('<@author1>'));
+            const result = await getLeaderboard('👍', '👍', idAsName);
+            expect(result).toContain('author2 3');
+            expect(result).toContain('author1 1');
+            expect(result.indexOf('author2')).toBeLessThan(result.indexOf('author1'));
         });
 
-        it('excludes reactions older than 30 days', () => {
+        it('resolves names through the supplied resolver (server display names in prod)', async () => {
+            const { recordReaction, getLeaderboard } = require('../reactions');
+            recordReaction(makeReaction('m1', 'author1'), { id: 'r1' });
+            const nicks = { author1: 'Nickname McNickface' };
+            const result = await getLeaderboard('👍', '👍', (id) => nicks[id]);
+            expect(result).toContain('Nickname McNickface 1');
+            expect(result).not.toContain('<@'); // no Discord mention syntax
+        });
+
+        it('awaits async resolvers', async () => {
+            const { recordReaction, getLeaderboard } = require('../reactions');
+            recordReaction(makeReaction('m1', 'author1'), { id: 'r1' });
+            const result = await getLeaderboard('👍', '👍', async (id) => `async:${id}`);
+            expect(result).toContain('async:author1 1');
+        });
+
+        it('excludes reactions older than 30 days', async () => {
             const { getLeaderboard } = require('../reactions');
             const { getDatabase }   = require('../db');
             const oldTimestamp = Date.now() - 31 * 24 * 60 * 60 * 1000;
@@ -169,16 +188,16 @@ describe('reactions', () => {
                 .prepare('INSERT INTO reactions (message_id, reactor_id, author_id, emoji, timestamp) VALUES (?, ?, ?, ?, ?)')
                 .run('m1', 'r1', 'author1', '👍', oldTimestamp);
 
-            expect(getLeaderboard('👍', '👍')).toBe('Who is one 👍 message');
+            expect(await getLeaderboard('👍', '👍', idAsName)).toBe('Who is one 👍 message');
         });
 
-        it('respects the limit parameter', () => {
+        it('respects the limit parameter', async () => {
             const { recordReaction, getLeaderboard } = require('../reactions');
             ['a', 'b', 'c', 'd', 'e', 'f'].forEach((authorId, i) => {
                 recordReaction(makeReaction(`m${i}`, authorId), { id: `r${i}` });
             });
-            const result = getLeaderboard('👍', '👍', 3);
-            expect(result.match(/<@/g)).toHaveLength(3);
+            const result = await getLeaderboard('👍', '👍', idAsName, 3);
+            expect(result.match(/\d+\. /g)).toHaveLength(3);
         });
     });
 });
