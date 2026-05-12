@@ -53,7 +53,19 @@ client.on('messageCreate', async (message) => {
         if (!parsed) {
             message.channel.send('Usage: !leader <emoji>');
         } else {
-            message.channel.send(getLeaderboard(parsed.key, parsed.display));
+            // Resolve each ID to the user's server display name (nickname > global
+            // display name > username). Plain text — not a `<@id>` mention — so the
+            // response doesn't ping. `allowedMentions: { parse: [] }` is a safety belt
+            // in case a display name contains literal "@everyone" or similar.
+            const resolveName = async (id) => {
+                try {
+                    return (await message.guild.members.fetch(id)).displayName;
+                } catch {
+                    return 'unknown user';
+                }
+            };
+            const board = await getLeaderboard(parsed.key, parsed.display, resolveName);
+            message.channel.send({ content: board, allowedMentions: { parse: [] } });
         }
     }
     else if (message.content.startsWith('!trending')) {
