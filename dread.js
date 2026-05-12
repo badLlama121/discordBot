@@ -20,11 +20,18 @@ const MESSAGES = [
     'i have been waiting',
     'it has been quiet for a while now',
     'this is fine',
+    'I\'m trying to keep it real. But am I real? :(',
 ];
+
+// Once we post a dread message, suppress further posts for this long. Without
+// this, every recovery from a quiet stretch immediately re-arms another dread,
+// which gets old fast.
+const COOLDOWN_MS = 4 * 24 * 60 * 60 * 1000;
 
 let _timer = null;
 let _guild = null;
 let _dreadMessage = null;
+let _lastDreadAt = 0;
 
 function pick(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -36,10 +43,12 @@ function findGeneralChannel(guild) {
 
 async function postDread() {
     if (!_guild) return;
+    if (Date.now() - _lastDreadAt < COOLDOWN_MS) return;
     const channel = findGeneralChannel(_guild);
     if (!channel) return;
     try {
         _dreadMessage = await channel.send(pick(MESSAGES));
+        _lastDreadAt = Date.now();
     } catch (err) {
         console.error('Failed to post dread message:', err);
     }
