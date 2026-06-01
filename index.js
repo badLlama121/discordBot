@@ -1,10 +1,11 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, MessageFlags } = require('discord.js');
 const config = require('./config').getConfig();
 const { replaceFirstMessage, splitReplaceCommand } = require('./replacer');
 const { processScores, getScore, getTrending } = require('./scoring');
 const { recordReaction, removeReaction, getLeaderboard, parseLeaderCommand, registerProxyMessage } = require('./reactions');
 const { oneBlockedMessage } = require('./one-blocked-message');
 const { recordActivity } = require('./dread');
+const { handleInteraction } = require('./commands');
 
 const getCleansedConfig = () => ({ ...config, Token: undefined });
 
@@ -97,6 +98,22 @@ async function withResolvedReaction(reaction, user, { fetchMessage = false, hand
     }
     handler(reaction, user);
 }
+
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    await recordActivity(interaction.channel);
+    try {
+        await handleInteraction(interaction);
+    } catch (err) {
+        console.error('Interaction handler error:', err);
+        const failure = { content: 'something broke', flags: MessageFlags.Ephemeral };
+        if (interaction.deferred || interaction.replied) {
+            interaction.editReply('something broke').catch(() => {});
+        } else {
+            interaction.reply(failure).catch(() => {});
+        }
+    }
+});
 
 client.on('messageReactionAdd',    (r, u) => withResolvedReaction(r, u, { fetchMessage: true,  handler: recordReaction }));
 client.on('messageReactionRemove', (r, u) => withResolvedReaction(r, u, { fetchMessage: false, handler: removeReaction }));

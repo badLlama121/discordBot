@@ -275,5 +275,6 @@ module.exports = {
     extractUrls,
     extractDiscordEntities,
     replaceFirstMessage,
-    splitReplaceCommand
+    splitReplaceCommand,
+    isBlockedPhrase
 };

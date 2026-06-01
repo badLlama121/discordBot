@@ -14,6 +14,12 @@ phrases and people, and lets users quote-edit each other's messages.
 | `!leader <emoji>` | Top 5 users who received that emoji reaction in the last 30 days |
 | `!configDump` | Dumps sanitised config JSON (requires `ALLOW_CONFIG_DUMP=true`) |
 
+Every command is also available as a Discord **slash command** with identical
+behaviour: `/s search:<text> replacement:<text>` (omit `replacement` to delete),
+`/score phrase:<text>`, `/trending`, `/leader emoji:<emoji>`, `/configdump`. The
+`!`-prefixed forms still work; both routes share the same underlying logic. See
+[Slash Commands](#slash-commands).
+
 ## Passive Scoring
 
 Every message is scanned line-by-line. Lines matching these patterns adjust
@@ -31,7 +37,9 @@ Scoring is case-insensitive. Phrase lookup via `!score` is also case-insensitive
 
 | File | Responsibility |
 |---|---|
-| `index.js` | Discord client setup and command routing |
+| `index.js` | Discord client setup, message/reaction/interaction routing |
+| `commands.js` | Slash command definitions + `handleInteraction` dispatcher |
+| `deploy-commands.js` | One-off script that registers slash commands with Discord (`npm run deploy`) |
 | `config.js` | Reads env vars; returns a typed, documented config object |
 | `db.js` | Opens the SQLite database singleton |
 | `scoring.js` | `processScores`, `getScore`, `getTrending` — all DB interaction; `parseScoreLine` is an internal pure helper |
@@ -100,6 +108,36 @@ collisions (e.g. `!s url/link` cannot match the URL placeholder).
 | `LT_PLACEHOLDER`     | `\uE003`  | internal | Shields `<` from `removeMd` inside `stripMarkdown` |
 | `GT_PLACEHOLDER`     | `\uE004`  | internal | Shields `>` from `removeMd` inside `stripMarkdown` |
 
+## Slash Commands
+
+`commands.js` defines the slash command schema (`slashCommands`, built with
+`SlashCommandBuilder`) and `handleInteraction`, which dispatches a
+`ChatInputCommandInteraction` to the matching handler. `index.js` wires this to
+the `interactionCreate` event; unknown commands are ignored and handler errors
+are caught there and surfaced as an ephemeral "something broke" reply.
+
+Slash command names must be lowercase, so `!configDump` becomes `/configdump`.
+
+**Registration**: `deploy-commands.js` (`npm run deploy`) registers the schema
+with Discord — guild-scoped when `GUILD_ID` is set (instant), else global. The
+application ID is derived from the bot token, so no extra env var is needed.
+Re-run after changing any command definition.
+
+**Reuse over the `!` path**: handlers call the same primitives as `index.js`
+(`replaceFirstMessage`, `getScore`, `getTrending`, `getLeaderboard`,
+`parseLeaderCommand`, `registerProxyMessage`, `oneBlockedMessage`). Two notable
+adaptations:
+
+- **`oneBlockedMessage`** expects a `message` shape, so slash handlers wrap the
+  interaction via `interactionAsMessage` — a triggered Easter egg replies to the
+  interaction directly, and the handler bails (as the `!` path does).
+- **`/s`** defers (history fetch can exceed the 3s window), then routes
+  `replaceFirstMessage`'s `channel.send` to `interaction.editReply`, so the
+  bot's reply *is* the quote. `editReply` returns the sent Message, which is
+  passed to `registerProxyMessage` for reaction-credit proxying — identical to
+  the `!s` flow. Blocked phrases get a private (ephemeral) "nope" since a slash
+  command must respond, whereas the `!s` path silently ignores them.
+
 ## `reactions.js` — Emoji Reaction Leaderboard
 
 The bot listens to `messageReactionAdd` and `messageReactionRemove` events and
@@ -147,6 +185,7 @@ unchanged.
 | Variable | Default | Description |
 |---|---|---|
 | `TOKEN` | — | Discord bot token (required) |
+| `GUILD_ID` | — | Server ID to register slash commands to (instant). Unset → global registration (~1h to propagate) |
 | `SCORE_DATABASE` | `./score.db3` | Path to the SQLite database file |
 | `MESSAGE_FETCH_COUNT` | `50` | How many recent messages `!s` searches |
 | `ALLOW_CONFIG_DUMP` | `false` | Enables `!configDump` |

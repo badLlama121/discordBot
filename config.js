@@ -36,7 +36,10 @@ const getConfig = () => {
         DreadInactivityMs: (dreadInactivityHours > 0 ? dreadInactivityHours : 2) * 60 * 60 * 1000,
 
         /** Discord bot token. Required. */
-        Token: process.env.TOKEN
+        Token: process.env.TOKEN,
+
+        /** Guild (server) ID to register slash commands to. Unset → register globally. */
+        GuildId: process.env.GUILD_ID
     };
 };
 
