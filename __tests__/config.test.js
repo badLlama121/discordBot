@@ -22,7 +22,8 @@ describe('config module', () => {
             ScoreDatabase: './score.db3',
             SearchPhrasesToBlock: [],
             TheRealests: ['kerouac5'],
-            Token: undefined
+            Token: undefined,
+            GuildId: undefined
         });
     });
 
