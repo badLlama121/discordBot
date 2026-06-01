@@ -126,19 +126,26 @@ function removeReaction(reaction, user) {
  * Returns a formatted leaderboard string for `emoji` over the last 30 days.
  * Returns the Easter-egg zero-results message if nobody qualifies.
  *
+ * Names are rendered as plain text (not Discord mentions) so the response
+ * doesn't ping anyone. The caller supplies `resolveName(userId)` — typically
+ * a guild-member lookup that returns each user's server display name.
+ *
  * @param {string} key     - The emoji DB key (from toEmojiKey / parseLeaderCommand).
  * @param {string} display - The emoji as it should appear in the response.
+ * @param {(userId: string) => string | Promise<string>} resolveName
  * @param {number} [limit=5]
- * @returns {string}
+ * @returns {Promise<string>}
  */
-function getLeaderboard(key, display, limit = 5) {
+async function getLeaderboard(key, display, resolveName, limit = 5) {
     const since = Date.now() - THIRTY_DAYS_MS;
     const rows = leaderboardStmt.all(key, since, limit);
 
     if (rows.length === 0) return `Who is one ${display} message`;
 
-    const entries = rows.map((r, i) => `${i + 1}. <@${r.author_id}> ${r.total}`).join(', ');
-    return `**${display} (30d)** ${entries}`;
+    const entries = await Promise.all(
+        rows.map(async (r, i) => `${i + 1}. ${await resolveName(r.author_id)} ${r.total}`)
+    );
+    return `**${display} (30d)** ${entries.join(', ')}`;
 }
 
 module.exports = { toEmojiKey, parseLeaderCommand, registerProxyMessage, recordReaction, removeReaction, getLeaderboard };
